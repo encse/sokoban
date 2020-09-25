@@ -1,0 +1,19 @@
+{
+  "name": "synachor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "compile": "npx tsc",
+    "start": "npm run compile && node -r esm build/index.js "
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "esm": "^3.2.25"
+  },
+  "devDependencies": {
+    "typescript": "^4.0.2",
+    "@types/node": "^14.0.13"
+  }
+}
