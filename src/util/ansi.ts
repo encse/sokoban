@@ -77,3 +77,5 @@ export const background = (st: string, fg: number, bg: number) => {
 
 export const clearScreen = '\x1b[2J';
 export const goHome = '\x1b[H';
+export const hideCursor = '\x1b[?25l';
+export const showCursor = '\x1b[?25h';

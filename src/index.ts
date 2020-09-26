@@ -1,10 +1,13 @@
-import {background, clearScreen, Color, color, goHome} from "./util/ansi";
+import {background, clearScreen, Color, color, goHome, hideCursor, showCursor} from "./util/ansi";
 import {stripMargin} from "./util/stripMargin";
-
+import * as fs from "fs";
 
 const baseFg = 0x424242;
 const baseBg = 0x505050;
-
+const baseCrateFg = 0x202020;
+const baseCrateBg = 0x654321;
+const baseCrateAtPositionFg = 0x202020;
+const baseCrateAtPositionBg = 0x909021;
 
 enum Cell {
     Wall,
@@ -53,8 +56,8 @@ const playerSprites = [
 
 const goalSprite = stripMargin`
     |        
-    |    x   
-    |        
+    |    /\\ 
+    |    \\/
 `.split('\n');
 
 const tileHeight = 3;
@@ -111,50 +114,38 @@ const wallTiles = stripMargin`
     |                                                                                                                                                                                                            
     `.split('\n');
 
+type Level = {
+    author: string;
+    title: string;
+    map: string;
+}
+function load(file: string){
+    const res = fs.readFileSync(file, {encoding: 'ascii'}).split('\n');
+    while (res.findIndex(x=>x.startsWith(':')) >= 0) {
+        res.splice(0, 1);
+    }
 
-const level1=stripMargin`
-    | ------XXXXX--
-    | XXXXXXX   XX-
-    | XX X @XX ** X
-    | X    *      X
-    | X  *  XXX   X
-    | XXX XXXXX*XXX
-    | X *  XXX ..X-
-    | X * * * ...X-
-    | X    XXX...X-
-    | X ** X-X...X-
-    | X  XXX-XXXXX-
-    | XXXX---------
-`;
+    const levels = [];
+    while(res.findIndex((x=>x.startsWith('Author:'))) > 0) {
+        res.splice(0, 2);
+        const height = res.findIndex((x=>x.startsWith('Author:')));
+        levels.push({
+            map: res.slice(0, height),
+            author: res[height].split(': ')[1],
+            title: res[height+1].split(': ')[1],
+        });
+        res.splice(0, height+2);
+    }
+    return levels;
+}
 
-const level = stripMargin`
-       |               XXX
-       |              XX.XXX
-       |              X....X
-       |  XXXXXXXXXXXXX....X
-       | XX   XX     XX....XXXXX
-       | X  **XX  * @XX....    X
-       | X      ** *X  ....X   X
-       | X  * XX ** X X....X  XX
-       | X  * XX *  X XX XXX  X
-       | XX XXXXX XXX         X
-       | XX   *  * XXXXX XXX  X
-       | X *XXX  X XXXXX X XXXX
-       | X   *   X       X
-       | X  * X* * *XXX  X
-       | X ***X *   X XXXX
-       | X    X  ** X
-       | XXXXXX   XXX
-       |      XXXXX
-`;
-// XXXX---------
-// const level=stripMargin`
-//     | X @
-// `;
+const levels = load('resources/levels.txt');
 
+const level = levels[0];
+const map = level.map;
 
+let steps = 0;
 type Pos = {readonly irow: number; readonly icol: number};
-const mtx = level.split("\n");
 function* positions(): Iterable<Pos>{
     for(let irow=0;irow<crow;irow++) {
         for (let icol = 0; icol < ccol; icol++) {
@@ -177,9 +168,9 @@ function findVoids(): Pos[] {
        for (let p of [...ps]) {
            if (getCh(p) == ' ' && (
                p.icol == 0 ||
-               p.icol == mtx[p.irow].length - 1 ||
+               p.icol == map[p.irow].length - 1 ||
                p.irow == 0 ||
-               p.irow == mtx.length - 1 ||
+               p.irow == map.length - 1 ||
                has(above(p)) ||
                has(below(p)) ||
                has(left(p)) ||
@@ -197,16 +188,16 @@ function findVoids(): Pos[] {
 
 function getCh(pos: Pos): string{
     const {irow, icol} = pos;
-    if(irow >= 0 && irow < mtx.length && icol >=0 && icol < mtx[irow].length){
-        return mtx[irow][icol];
+    if(irow >= 0 && irow < map.length && icol >=0 && icol < map[irow].length){
+        return map[irow][icol];
     }
     return ' ';
 }
-const ccol = Math.max(...mtx.map(x=>x.length));
-const crow = mtx.length;
+const ccol = Math.max(...map.map(x=>x.length));
+const crow = map.length;
 let player = find('@')[0];
-let crates = find('*');
-let walls = find('X');
+let crates = find('$');
+let walls = find('#');
 let goals = find('.');
 let voids = findVoids();
 let dir = Dir.Right;
@@ -223,7 +214,7 @@ function eq(posA: Pos, posB: Pos){
 
 function validPos(pos: Pos): boolean{
     const {irow, icol} = pos;
-    return irow >= 0 && irow < mtx.length && icol >=0 && icol < mtx[irow].length && !voids.some(p => eq(p, pos));
+    return irow >= 0 && irow < map.length && icol >=0 && icol < map[irow].length && !voids.some(p => eq(p, pos));
 }
 
 function left(pos: Pos){
@@ -276,9 +267,12 @@ function pattern(st1:string,st2:string,st3:string,st4:string): string[] {
     return ["xxxxxxxxxx", "xxxxxxxxxx", "xxxxxxxxxx", "xxxxxxxxxx", "xxxxxxxxxx", "xxxxxxxxxx",];
 }
 
+let timeStart: number=0;
 function move(drow: number, dcol: number) {
+
     const posT = {irow: player.irow + drow, icol: player.icol + dcol};
 
+    const oldPos = player;
     dir =
         drow == 1  && dcol == 0 ? Dir.Down :
         drow == -1  && dcol == 0 ? Dir.Up :
@@ -305,8 +299,16 @@ function move(drow: number, dcol: number) {
             break;
 
     }
+    if(!eq(oldPos, player)){
+        if(steps == 0){
+            timeStart = Date.now();
+        }
+        steps++;
+    }
     draw();
 }
+
+setInterval(()=>draw(), 1000);
 
 let seed = 1;
 
@@ -491,47 +493,26 @@ function darkenColor(hex: number, m: number){
     return rgbToHex(hslToRgb(hsl));
 }
 
-function drawShadow2(pss: Paxel[][], tile: string[], irow: number, icol: number, big: boolean ) {
-    for (let tileRow = 1; tileRow <= tileHeight; tileRow++) {
-        for (let tileCol = 1; tileCol <= tileWidth; tileCol++) {
-            const above = tile[tileRow - 1][tileCol - 1] != ' ';
-            const left = tileRow < tileHeight && tile[tileRow][tileCol - 1] != ' ';
-            if (above) {
-                let p = pss[irow * tileHeight + tileRow][icol * tileWidth + tileCol];
-                if (p != null) {
-
-                    let bg = darkenColor(p.fg, 0.5);
-                    if(!big && !left){
-                        pss[irow * tileHeight + tileRow][icol * tileWidth + tileCol] = {...p, ch: '▄', bg: bg, fg:p.bg}; // : '▄▀' //ch: '█'
-                    } else {
-                        pss[irow * tileHeight + tileRow][icol * tileWidth + tileCol] = {...p, bg: bg, fg: 0x101010 }; // : '▀' //ch: '█'
-                    }
-                }
-            }
-        }
-    }
-}
-
-function drawShadow(pss: Paxel[][], tileWidth: number, tileHeight: number, irow: number, icol: number, fg: number, bg: number) {
+function drawShadow(pss: Paxel[][], tileWidth: number, tileHeight: number, irow: number, icol: number, fg: number, bg: number, drow: number=0, dcol: number=0) {
     let st = '';
-    for (let tileRow = 0; tileRow <= tileHeight; tileRow++) {
+    for (let tileRow = 0; tileRow < tileHeight; tileRow++) {
         for (let tileCol = 0; tileCol < tileWidth; tileCol++) {
             st += ' ';
         }
         st+=' \n';
     }
-    drawTile(pss, irow, icol, st.split('\n'), 0,0, fg, bg, false);
+    drawTile(pss, irow, icol, st.split('\n'), dcol,drow, fg, bg, false);
 
 }
 
-const baseWallFg = 0x282828;
+const baseWallFg = darkenColor(0x323232, 0.5);
 const baseWallBg = 0x323232;
 
 function drawWallsShadows(pss: Paxel[][]) {
 
     for (let wall of walls) {
         const {irow, icol} = wall;
-        drawShadow(pss, tileWidth, tileHeight, irow, icol, baseBg, darkenColor(baseWallFg, 0.9));
+        drawShadow(pss, tileWidth, tileHeight, irow, icol, baseBg, darkenColor(baseWallFg, 0.9), 0,0);
     }
 }
 
@@ -645,14 +626,31 @@ function drawPlayer(pss: Paxel[][]) {
 
 function drawCrates(pss: Paxel[][]) {
     for(let crate of crates){
-        drawShadow(pss, tileWidth-1, tileHeight, crate.irow, crate.icol, baseBg, darkenColor(0x654321, 0.5));
+        const bg =isGoal(crate) ? baseCrateAtPositionBg : baseCrateBg;
+        const fg =isGoal(crate) ? baseCrateAtPositionFg : baseCrateFg;
+
+        drawShadow(pss, tileWidth-1, tileHeight, crate.irow, crate.icol, baseBg, darkenColor(bg, 0.5));
     }
 
     for(let crate of crates){
-        drawTile(pss, crate.irow, crate.icol, crateSprite, 0,0, 0x202020, 0x654321);
+        const bg =isGoal(crate) ? baseCrateAtPositionBg : baseCrateBg;
+        const fg =isGoal(crate) ? baseCrateAtPositionFg : baseCrateFg;
+        drawTile(pss, crate.irow, crate.icol, crateSprite, 0,0, fg, bg);
+    }
+}
+function print(pss:Paxel[][], st: string, irow: number, icol: number, fg: number){
+    for(let i=0;i<st.length;i++){
+        pss[irow][icol+i] = {
+            ...pss[irow][icol+i],
+            ch: st[i],
+            fg: fg
+        }
     }
 }
 let pssPrev: Paxel[][] | null = null;
+
+
+
 function draw() {
     seed = 0;
     const pss = init();
@@ -665,15 +663,17 @@ function draw() {
 
     let st = '';
     if(pssPrev == null){
-        st += `${clearScreen}${goHome}`;
+        st += `${clearScreen}${goHome}${hideCursor}`;
     }
 
+    const time = steps == 0 ? 0 : Math.floor((Date.now() - timeStart)/1000);
+    print(pss, `${level.title}    Steps: ${steps.toString(10).padStart(4, '0')}    Time: ${time.toString(10).padStart(4, '0')}`, 0,0, 0xffffff);
     for(let irow=0;irow<pss.length;irow++){
         for(let icol = 0;icol<pss[0].length;icol++){
             const prev = pssPrev?.[irow]?.[icol];
             const p = pss[irow][icol];
             if(p?.ch != prev?.ch || p?.fg != prev?.fg || p?.bg != prev?.bg) {
-                st += `\x1b[${irow};${icol}H`;
+                st += `\x1b[${irow+1};${icol+1}H`;
                 if(p == null){
                     st += ' ';
                 } else {
@@ -682,10 +682,17 @@ function draw() {
             }
         }
     }
+
     pssPrev = pss;
-    st+=goHome;
+
     process.stdout.write(st);
 }
+process.on('SIGTERM', () => {
+    process.exit(0);
+});
+process.on('exit', () => {
+    process.stdout.write(clearScreen+showCursor);
+});
 process.stdin.setRawMode(true);
 process.stdin.on("data", (data) => {
     if (data[0] == 27 && data[1] == 91 && data[2]==0x44){
