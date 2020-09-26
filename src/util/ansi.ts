@@ -58,16 +58,18 @@ export const color = (st: string, fg: Color, bg?: Color, bold?: boolean) => {
 }
 
 
-export const background = (st: string, r: number, g: number, b: number, br: number, bg: number, bb: number) => {
-    r = Math.min(Math.max(0, r), 255);
-    g = Math.min(Math.max(0, g), 255);
-    b = Math.min(Math.max(0, b), 255);
-    br = Math.min(Math.max(0, br), 255);
-    bg = Math.min(Math.max(0, bg), 255);
-    bb = Math.min(Math.max(0, bb), 255);
+export const background = (st: string, fg: number, bg: number) => {
+    const fgR = (fg >> 16) & 255;
+    const fgG = (fg >> 8) & 255;
+    const fgB = (fg >> 0) & 255;
+
+    const bgR = (bg >> 16) & 255;
+    const bgG = (bg >> 8) & 255;
+    const bgB = (bg >> 0) & 255;
+
     let res = "";
-    res += `\x1b[38;2;${r};${g};${b}m`;
-    res += `\x1b[48;2;${br};${bg};${bb}m`;
+    res += `\x1b[38;2;${fgR};${fgG};${fgB}m`;
+    res += `\x1b[48;2;${bgR};${bgG};${bgB}m`;
     res += st;
     res +=`\x1b[0m`;
     return res;
