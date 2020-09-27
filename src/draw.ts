@@ -80,10 +80,46 @@ function drawGround(random: Random, level: Level, pss: Paxel[][]) {
     }
 }
 
+function drawTrack(_random: Random, level: Level, pss: Paxel[][]) {
+
+    for (let row = 0; row < level.crow; row++) {
+        for (let column = 0; column < level.ccol; column++) {
+            let h = level.visitedHoriz(row, column);
+            let v = level.visitedVert(row, column);
+            if(h + v > 0){
+                const x = column*tileWidth;
+                const y = row*tileHeight;
+                const d = (x: number, y: number, s: number) => {
+                    if(pss[y][x] != null) {
+                        pss[y][x] = {
+                            ...pss[y][x],
+                            bg: darkenColor(pss[y][x].bg, Math.pow(0.98, s)),
+                            fg: darkenColor(pss[y][x].fg, Math.pow(0.98, s))
+                        }
+                    }
+                };
+
+                for(let i=0;i<tileWidth;i++){
+                    d(x+i, y, h);
+                    d(x+i, y+2, h);
+                }
+                for(let i=0;i<tileHeight;i++){
+                    d(x+1, y+i, v);
+                    d(x+2, y+i, v);
+                    d(x+tileWidth-1, y+i, v);
+                    d(x+tileWidth-2, y+i, v);
+                }
+            }
+        }
+    }
+}
+
+
 export function draw(level: Level) {
     const random = new Random(0);
     const pss = init(level);
     drawGround(random, level, pss);
+    drawTrack(random, level, pss);
     drawGoals(random, level, pss);
     drawWallsShadows(random, level, pss);
     drawCrates(random, level, pss);
@@ -256,8 +292,36 @@ function drawGoals(random: Random, level: Level,pss: Paxel[][]) {
 }
 
 function drawPlayer(random: Random, level: Level,pss: Paxel[][]) {
-    drawShadow(random, level, pss, tileWidth-2, tileHeight, level.playerPosition.row, level.playerPosition.column, baseBg, darkenColor(0xaaaaaa, 0.4),0,1);
-    drawTile(random, level, pss, level.playerPosition.row, level.playerPosition.column, playerSprites[level.playerDirection], 0,0,0xaaaaaa, null);
+
+    let irow = level.playerPosition.row;
+    let icol = level.playerPosition.column;
+    const tile = playerSprites.tiles[level.playerDirection];
+    for (let tileRow = 0; tileRow < tileHeight; tileRow++) {
+        for (let tileCol = 0; tileCol < tileWidth; tileCol++) {
+
+            const ch = tile[tileRow][tileCol];
+            const bg = tile[tileRow][tileCol + tileWidth];
+            const fg = tile[tileRow][tileCol + 2 * tileWidth];
+
+            let p = {
+                ...pss[irow * tileHeight + tileRow][icol * tileWidth + tileCol],
+            };
+            if (ch != ' ') {
+                p = {...p, ch};
+            }
+            if (bg != ' ') {
+                p = {...p, bg: fuzzyColor(random, playerSprites.colors[bg.charCodeAt(0) - '0'.charCodeAt(0)])};
+            } else {
+                fuzzyColor(random, 0xffffff);
+            }
+            if (fg != ' ') {
+                p = {...p, fg: fuzzyColor(random, playerSprites.colors[fg.charCodeAt(0) - '0'.charCodeAt(0)])};
+            } else {
+                fuzzyColor(random, 0xffffff);
+            }
+            pss[irow * tileHeight + tileRow][icol * tileWidth+ tileCol] = p;
+        }
+    }
 }
 
 function drawCrates(random: Random, level: Level,pss: Paxel[][]) {

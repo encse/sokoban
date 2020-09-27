@@ -16,28 +16,38 @@ export const crateTile = stripMargin`
     | └┴┴┴┴┘ 
 `.split('\n');
 
-export const playerSprites = [
-    stripMargin`
-    |  █▄▄▄▄█
-    |  ▓▓██▓▓ 
-    |  ▓▓██▓▓   
-    `.split('\n'),
-    stripMargin`
-    |  ▓▓▓ █▀ 
-    |  █████  
-    |  ▓▓▓ █▄   
-    `.split('\n'),
-    stripMargin`
-    |  ▓▓██▓▓ 
-    |  ▓▓██▓▓  
-    |  █▀▀▀▀█
-    `.split('\n'),
-    stripMargin`
-    |  ▀█ ▓▓▓ 
-    |   █████ 
-    |  ▄█ ▓▓▓   
-    `.split('\n'),
-];
+export const playerSprites = {
+    colors: [
+        0x000000, // black
+        //0xb5a83d, // orange
+        0xA9A9A9, // dark gray
+        0x808080, // gray
+        0x939EDA, //
+    ],
+    tiles: [
+        stripMargin`
+        |  █▄▄▄▄█        222222 
+        |  ▓▓░░▓▓   11   003300 
+        |  ▓▓░░▓▓   11   003300 
+        `.split('\n'),
+        stripMargin`
+        |  ▓▓▓ █▀        000 22
+        |  ░░░░█  11111  33332 
+        |  ▓▓▓ █▄        000 22
+        `.split('\n'),
+        stripMargin`
+        |  ▓▓░░▓▓   11   003300 
+        |  ▓▓░░▓▓   11   003300 
+        |  █▀▀▀▀█        222222 
+        `.split('\n'),
+        stripMargin`
+        |  ▀█ ▓▓▓        22 000
+        |   █░░░░  11111  23333
+        |  ▄█ ▓▓▓        22 000
+        `.split('\n'),
+    ]
+
+};
 
 export const goalSprite = stripMargin`
     |       

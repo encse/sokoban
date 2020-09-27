@@ -1,6 +1,7 @@
 import {Position} from "./position";
 import {LevelData} from "./levelData";
 import {tileHeight, tileWidth} from "./tiles";
+import {Dir} from "fs";
 
 export enum Cell {
     Wall,
@@ -14,9 +15,13 @@ export enum Cell {
 enum Direction {
     Up =    0,
     Right = 1,
-    Left =  3,
     Down =  2,
+    Left =  3,
 }
+
+const horiz = (dir: Direction) => dir === Direction.Left || dir === Direction.Right;
+const vert = (dir: Direction) => !horiz(dir);
+
 
 type State = {
     readonly time: number;
@@ -33,6 +38,8 @@ type State = {
     readonly completed: boolean;
     readonly steps: number;
     readonly pushes: number;
+    readonly visitedHoriz: ReadonlyMap<string, number>;
+    readonly visitedVert: ReadonlyMap<string, number>;
 }
 
 
@@ -137,6 +144,8 @@ export class Level {
             steps: 0,
             pushes: 0,
             time: 0,
+            visitedHoriz: new Map<string, number>(),
+            visitedVert: new Map<string, number>()
         });
     }
     isGoal(pos: Position) {
@@ -174,17 +183,10 @@ export class Level {
     }
 
     move(drow: number, dcol: number) {
-        let newState: State = this.state;
+        let oldState = this.state;
+        let newState: State = oldState;
         const newPosition = this.playerPosition.move(drow, dcol);
-        newState = {
-            ...newState,
-            playerDirection:
-                drow == 1 && dcol == 0 ? Direction.Down :
-                drow == -1 && dcol == 0 ? Direction.Up :
-                drow == 0 && dcol == -1 ? Direction.Left :
-                drow == 0 && dcol == 1 ? Direction.Right :
-                this.playerDirection
-        };
+
 
         switch (this.getCell2(newPosition)) {
             case Cell.Wall:
@@ -217,7 +219,70 @@ export class Level {
                 break;
         }
 
+
+        const inc = (map: ReadonlyMap<string, number>, position: Position): ReadonlyMap<string, number> => {
+            const key = this.getKey(position.row, position.column);
+            const res = new Map<string, number>(map.entries());
+            res.set(key, (map.get(key) ?? 0) + 1);
+            return res;
+        };
+
+        const incHoriz = (state: State, position: Position) => {
+            return  {
+                ...state,
+                visitedHoriz: inc(state.visitedHoriz, position)
+            }
+        };
+
+        const incVert = (state: State, position: Position) => {
+            return  {
+                ...state,
+                visitedVert: inc(state.visitedVert, position)
+            }
+        };
+
+        newState = {
+            ...newState,
+            playerDirection:
+                drow == 1 && dcol == 0 ? Direction.Down :
+                drow == -1 && dcol == 0 ? Direction.Up :
+                drow == 0 && dcol == -1 ? Direction.Left :
+                drow == 0 && dcol == 1 ? Direction.Right :
+                this.playerDirection
+        };
+
+        // turn in original position
+        if (newState.playerDirection !== oldState.playerDirection) {
+            if (vert(oldState.playerDirection)) {
+                if (horiz(newState.playerDirection)){
+                    newState = incHoriz(newState, oldState.playerPosition);
+                } else {
+                    newState = incHoriz(newState, oldState.playerPosition);
+                    newState = incVert(newState, oldState.playerPosition);
+                }
+            } else {
+                if (vert(newState.playerDirection)){
+                    newState = incVert(newState, oldState.playerPosition);
+                } else {
+                    newState = incVert(newState, oldState.playerPosition);
+                    newState = incHoriz(newState, oldState.playerPosition);
+                }
+            }
+        }
+
+        if (!oldState.playerPosition.eq(newState.playerPosition)) {
+            if (horiz(newState.playerDirection)) {
+                newState = incHoriz(newState, newState.playerPosition);
+            } else {
+                newState = incVert(newState, newState.playerPosition);
+            }
+        }
+
         return new Level(newState);
+    }
+
+    private getKey(row: number, column: number) {
+        return `${row};${column}`
     }
 
     left() {
@@ -248,5 +313,12 @@ export class Level {
 
     tick() {
         return this.completed || this.steps == 0 ? this : new Level({...this.state, time: this.state.time+1});
+    }
+
+    visitedHoriz(row: number, column: number) {
+        return this.state.visitedHoriz.get(this.getKey(row, column)) ?? 0;
+    }
+    visitedVert(row: number, column: number) {
+        return this.state.visitedVert.get(this.getKey(row, column)) ?? 0;
     }
 }
