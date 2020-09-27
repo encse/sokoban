@@ -10,13 +10,27 @@ function getLevel(i: number): Level {
     i = (i + levelData.length) % levelData.length;
 
     if (!levels.has(i)) {
-        levels.set(i, new Level(levelData[i]))
+        levels.set(i, Level.fromData(levelData[i]))
     }
     return levels.get(i)!;
 }
 
 let levelIndex = 0;
-let level: Level = getLevel(levelIndex);
+
+let currentLevel: Level = getLevel(levelIndex);
+let previousLevel: Level = currentLevel;
+
+function updateLevel(cb: (level: Level) => Level){
+    const newLevel = cb(currentLevel);
+    if (newLevel.title !== previousLevel.title) {
+        previousLevel = newLevel;
+    } else if (!newLevel.playerPosition.eq(currentLevel.playerPosition)) {
+        previousLevel = currentLevel;
+    }
+    levels.set(levelIndex, newLevel);
+    currentLevel = newLevel;
+    draw(currentLevel);
+}
 
 process.stdin.setRawMode(true);
 
@@ -29,37 +43,38 @@ process.on('exit', () => {
 
 process.stdin.on("data", (data) => {
     if (data[0] == 27 && data[1] == 91 && data[2]==0x44){
-        level.left();
+        updateLevel(level => level.left());
     }  else if(data[0] == 27 && data[1] == 91 && data[2]==0x43){
-        level.right();
+        updateLevel(level => level.right());
     }  else if(data[0] == 27 && data[1] == 91 && data[2]==0x41){
-        level.up();
+        updateLevel(level => level.up());
     }  else if(data[0] == 27 && data[1] == 91 && data[2]==0x42){
-        level.down();
+        updateLevel(level => level.down());
     } else if(data[0] == 122){
         levelIndex--;
         if(levelIndex < 0){
             levelIndex += levelData.length;
         }
-        level = getLevel(levelIndex);
+        updateLevel(() => getLevel(levelIndex));
     } else if(data[0] == 114){
         levels.delete(levelIndex);
-        level = getLevel(levelIndex);
+        updateLevel(() => getLevel(levelIndex));
     } else if(data[0] == 120){
         levelIndex++;
         if(levelIndex > levelData.length -1){
             levelIndex-=levelData.length;
         }
-        level = getLevel(levelIndex);
+        updateLevel(() => getLevel(levelIndex));
 
-    } else if(data[0] == 0x1b){
+    } else if(data[0] == 127){
+        updateLevel(() => previousLevel);
+    }else if(data[0] == 0x1b){
         process.exit(0);
     } else {
         console.log(data);
     }
-    draw(level);
 });
 
-setInterval(()=>draw(level), 1000);
+setInterval(()=>updateLevel(level => level.tick()), 1000);
 
-draw(level);
+draw(currentLevel);

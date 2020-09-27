@@ -18,64 +18,93 @@ enum Direction {
     Down =  2,
 }
 
-export class Level {
+type State = {
+    readonly time: number;
     readonly author: string;
     readonly title: string;
     readonly ccol: number;
     readonly crow: number;
-
-    private goalPositionsI: Position[] = [];
-    private wallPositionsI: Position[] = [];
-    private voidPositionsI: Position[] = [];
-    private cratePositionsI: Position[] = [];
-    private playerPositionI: Position;
-    private playerDirectionI = Direction.Right;
-    private completedI: boolean = false;
-
-    private stepsI: number = 0;
-    private firstStepTime: number = 0;
-    private lastStepTime: number = 0;
+    readonly goalPositions: readonly Position[];
+    readonly wallPositions: readonly Position[];
+    readonly voidPositions: readonly Position[];
+    readonly cratePositions: readonly Position[];
+    readonly playerPosition: Position;
+    readonly playerDirection: Direction;
+    readonly completed: boolean;
+    readonly steps: number;
+    readonly pushes: number;
+}
 
 
-    get completed(): boolean {
-        return this.completedI;
+function* positions(crow: number, ccol: number): Iterable<Position> {
+    for (let irow = 0; irow < crow; irow++) {
+        for (let icol = 0; icol < ccol; icol++) {
+            yield new Position(irow, icol);
+        }
     }
+}
 
-    get cratesAtGoal(): number{
-        return this.cratePositions.filter(cratePosition => this.isGoal(cratePosition)).length;
-    }
 
-    get time() {
-        const stop = this.steps == 0 || this.completed ? this.lastStepTime : Date.now();
-        return Math.floor((stop - this.firstStepTime) / 1000);
+function  getCh(map: string[], position: Position): string {
+    const {row, column} = position;
+    if (row >= 0 && row < map.length && column >= 0 && column < map[row].length) {
+        return map[row][column];
     }
+    return ' ';
+}
 
-    get playerPosition() {
-        return this.playerPositionI;
-    }
 
-    get goalPositions(){
-        return this.goalPositionsI;
-    }
+function find(map: string[], crow: number, ccol: number, ch: string): Position[] {
+    return [...positions(crow, ccol)].filter(pos => getCh(map, pos) === ch);
+}
 
-    get wallPositions(){
-        return this.wallPositionsI;
-    }
+function findVoids(map: string[],crow: number, ccol: number, ): Position[] {
+    const voids: Position[] = [];
+    let ps = new Set(positions(crow, ccol));
 
-    get voidPositions(){
-        return this.voidPositionsI;
+    const has = (p: Position) => voids.some(v => v.eq(p));
+    let any = true;
+    while (any) {
+        any = false;
+        for (let p of [...ps]) {
+            if (getCh(map, p) == ' ' && (
+                p.column == 0 ||
+                p.column == map[p.row].length - 1 ||
+                p.row == 0 ||
+                p.row == map.length - 1 ||
+                has(p.above()) ||
+                has(p.below()) ||
+                has(p.left()) ||
+                has(p.right()))
+            ) {
+                ps.delete(p);
+                voids.push(p);
+                any = true;
+            }
+        }
     }
+    return voids;
+}
 
-    get steps(){
-        return this.stepsI;
-    }
 
-    get cratePositions(){
-        return this.cratePositionsI;
-    }
-    get playerDirection(){
-        return this.playerDirectionI;
-    }
+export class Level {
+
+    public get author() {return this.state.author;}
+    public get title() {return this.state.title;}
+    public get ccol() {return this.state.ccol;}
+    public get crow() {return this.state.crow;}
+    public get goalPositions() {return this.state.goalPositions;}
+    public get wallPositions() {return this.state.wallPositions;}
+    public get cratePositions() {return this.state.cratePositions;}
+    public get voidPositions() {return this.state.voidPositions;}
+    public get playerPosition() {return this.state.playerPosition;}
+    public get playerDirection() {return this.state.playerDirection;}
+    public get steps() {return this.state.steps;}
+    public get pushes() {return this.state.pushes;}
+    public get time() {return this.state.time;}
+    public get completed() {return this.state.completed;}
+
+
 
     get width() {
         return this.ccol * tileWidth;
@@ -85,19 +114,31 @@ export class Level {
         return this.crow * tileHeight;
     };
 
-    constructor(levelData: LevelData) {
-        const map = levelData.map.split('\n');
-        this.ccol = Math.max(...map.map(x => x.length));
-        this.crow = map.length;
-        this.title = levelData.title;
-        this.author = levelData.author;
-        this.playerPositionI = this.find(map, '@')[0];
-        this.cratePositionsI = this.find(map, '$');
-        this.wallPositionsI = this.find(map, '#');
-        this.goalPositionsI = this.find(map, '.');
-        this.voidPositionsI = this.findVoids(map);
+    private constructor(private readonly state: State) {
+
     }
 
+    public static fromData(levelData: LevelData):Level{
+        const map = levelData.map.split('\n');
+        const ccol= Math.max(...map.map(x => x.length));
+        const crow = map.length;
+        return new Level({
+            ccol : ccol,
+            crow : crow,
+            title : levelData.title,
+            author: levelData.author,
+            playerPosition: find(map, crow, ccol, '@')[0],
+            wallPositions: find(map, crow, ccol, '#'),
+            goalPositions: find(map, crow, ccol, '.'),
+            voidPositions: findVoids(map, crow, ccol),
+            completed:false,
+            cratePositions: find(map, crow, ccol, '$'),
+            playerDirection: Direction.Right,
+            steps: 0,
+            pushes: 0,
+            time: 0,
+        });
+    }
     isGoal(pos: Position) {
         return this.goalPositions.some(goal => goal.eq(pos));
     }
@@ -132,15 +173,18 @@ export class Level {
         return this.getCell2(pos);
     }
 
-    move(drow: number, dcol: number): boolean {
+    move(drow: number, dcol: number) {
+        let newState: State = this.state;
         const newPosition = this.playerPosition.move(drow, dcol);
-        const oldPlayerPosition = this.playerPosition;
-        this.playerDirectionI =
-            drow == 1 && dcol == 0 ? Direction.Down :
-            drow == -1 && dcol == 0 ? Direction.Up :
-            drow == 0 && dcol == -1 ? Direction.Left :
-            drow == 0 && dcol == 1 ? Direction.Right :
-            this.playerDirection;
+        newState = {
+            ...newState,
+            playerDirection:
+                drow == 1 && dcol == 0 ? Direction.Down :
+                drow == -1 && dcol == 0 ? Direction.Up :
+                drow == 0 && dcol == -1 ? Direction.Left :
+                drow == 0 && dcol == 1 ? Direction.Right :
+                this.playerDirection
+        };
 
         switch (this.getCell2(newPosition)) {
             case Cell.Wall:
@@ -148,50 +192,47 @@ export class Level {
                 break;
             case Cell.Crate:
                 const newCratePosition = this.playerPosition.move(2 * drow, 2 * dcol);
-                if (!this.isWall(newCratePosition) && !this.isCrate(newCratePosition)) {
-                    this.playerPositionI = newPosition;
+                if (!this.completed && !this.isWall(newCratePosition) && !this.isCrate(newCratePosition)) {
                     const icrate = this.cratePositions.findIndex(crate => crate.eq(newPosition));
-                    this.cratePositions.splice(icrate, 1, newCratePosition);
+                    const newCratePositions = this.cratePositions.map((cratePosition, i) => i == icrate ? newCratePosition : cratePosition);
+                    const newCompleted = newCratePositions.every(cratePosition => this.isGoal(cratePosition));
+                    newState = {
+                        ...newState,
+                        pushes: this.pushes + 1,
+                        steps: this.steps + 1,
+                        playerPosition: newPosition,
+                        cratePositions: newCratePositions,
+                        completed: newCompleted,
+                    };
                 }
                 break;
             case Cell.Goal:
             case Cell.Empty:
             case Cell.Void:
-                this.playerPositionI = newPosition;
+                newState = {
+                    ...newState,
+                    playerPosition: newPosition,
+                    steps: this.steps + 1,
+                };
                 break;
-
         }
 
-        if (!oldPlayerPosition.eq(this.playerPosition)) {
-            const now = Date.now();
-            if (this.steps == 0) {
-                this.firstStepTime = now;
-            }
-            if (!this.completed) {
-                this.stepsI++;
-                this.lastStepTime = now;
-            }
-
-            this.completedI = this.cratesAtGoal === this.cratePositions.length;
-            return true;
-        } else {
-            return false
-        }
+        return new Level(newState);
     }
 
-    left(): boolean {
+    left() {
         return this.move(0, -1);
     }
 
-    right(): boolean {
+    right() {
         return this.move(0, 1);
     }
 
-    up(): boolean {
+    up() {
         return this.move(-1, 0);
     }
 
-    down(): boolean {
+    down() {
         return this.move(1, 0);
     }
 
@@ -204,52 +245,8 @@ export class Level {
         );
     }
 
-    private* positions(): Iterable<Position> {
-        for (let irow = 0; irow < this.crow; irow++) {
-            for (let icol = 0; icol < this.ccol; icol++) {
-                yield new Position(irow, icol);
-            }
-        }
+
+    tick() {
+        return this.completed || this.steps == 0 ? this : new Level({...this.state, time: this.state.time+1});
     }
-
-    private find(map: string[], ch: string): Position[] {
-        return [...this.positions()].filter(pos => Level.getCh(map, pos) === ch);
-    }
-
-    private findVoids(map: string[]): Position[] {
-        const voids: Position[] = [];
-        let ps = new Set(this.positions());
-
-        const has = (p: Position) => voids.some(v => v.eq(p));
-        let any = true;
-        while (any) {
-            any = false;
-            for (let p of [...ps]) {
-                if (Level.getCh(map, p) == ' ' && (
-                    p.column == 0 ||
-                    p.column == map[p.row].length - 1 ||
-                    p.row == 0 ||
-                    p.row == map.length - 1 ||
-                    has(p.above()) ||
-                    has(p.below()) ||
-                    has(p.left()) ||
-                    has(p.right()))
-                ) {
-                    ps.delete(p);
-                    voids.push(p);
-                    any = true;
-                }
-            }
-        }
-        return voids;
-    }
-
-    private static getCh(map: string[], position: Position): string {
-        const {row, column} = position;
-        if (row >= 0 && row < map.length && column >= 0 && column < map[row].length) {
-            return map[row][column];
-        }
-        return ' ';
-    }
-
 }

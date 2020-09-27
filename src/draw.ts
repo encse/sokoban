@@ -90,7 +90,7 @@ export function draw(level: Level) {
     drawPlayer(random, level, pss);
     drawWalls(random, level, pss);
 
-    if(levelPrev !== level){
+    if (levelPrev !=null && (levelPrev.width !== level.width || levelPrev.height !== level.height)) {
         pssPrev = null;
     }
     let st = '';
@@ -98,7 +98,8 @@ export function draw(level: Level) {
         st += `${clearScreen}${goHome}${hideCursor}`;
     }
 
-    print(pss, `${level.title}    Steps: ${level.steps.toString(10).padStart(4, '0')}    Time: ${level.time.toString(10).padStart(4, '0')}`, 0,0, 0xffffff);
+    const fmt = (num: number) => num.toString(10).padStart(4, '0');
+    print(pss, `${level.title}    Steps: ${fmt(level.steps)}    Pushes: ${fmt(level.pushes)}    Time: ${fmt(level.time)}`, 0,0, 0xffffff);
     for(let irow=0;irow<pss.length;irow++){
         for(let icol = 0;icol<pss[0].length;icol++){
             const prev = pssPrev?.[irow]?.[icol];
