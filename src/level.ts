@@ -1,7 +1,6 @@
 import {Position} from "./position";
 import {LevelData} from "./levelData";
 import {tileHeight, tileWidth} from "./tiles";
-import {Dir} from "fs";
 
 export enum Cell {
     Wall,
@@ -12,15 +11,15 @@ export enum Cell {
     Void
 }
 
-enum Direction {
+export enum Dir {
     Up =    0,
     Right = 1,
     Down =  2,
     Left =  3,
 }
 
-const horiz = (dir: Direction) => dir === Direction.Left || dir === Direction.Right;
-const vert = (dir: Direction) => !horiz(dir);
+const horiz = (dir: Dir) => dir === Dir.Left || dir === Dir.Right;
+const vert = (dir: Dir) => !horiz(dir);
 
 
 type State = {
@@ -34,7 +33,7 @@ type State = {
     readonly voidPositions: readonly Position[];
     readonly cratePositions: readonly Position[];
     readonly playerPosition: Position;
-    readonly playerDirection: Direction;
+    readonly playerDirection: Dir;
     readonly completed: boolean;
     readonly steps: number;
     readonly pushes: number;
@@ -140,7 +139,7 @@ export class Level {
             voidPositions: findVoids(map, crow, ccol),
             completed:false,
             cratePositions: find(map, crow, ccol, '$'),
-            playerDirection: Direction.Right,
+            playerDirection: Dir.Right,
             steps: 0,
             pushes: 0,
             time: 0,
@@ -160,7 +159,7 @@ export class Level {
         return this.cratePositions.some(crates => crates.eq(pos));
     }
 
-    private getCell2(pos: Position): Cell {
+    public getCell2(pos: Position): Cell {
         if (!this.validPos(pos)) {
             return Cell.Void;
         } else if (this.playerPosition.eq(pos)) {
@@ -244,10 +243,10 @@ export class Level {
         newState = {
             ...newState,
             playerDirection:
-                drow == 1 && dcol == 0 ? Direction.Down :
-                drow == -1 && dcol == 0 ? Direction.Up :
-                drow == 0 && dcol == -1 ? Direction.Left :
-                drow == 0 && dcol == 1 ? Direction.Right :
+                drow == 1 && dcol == 0 ? Dir.Down :
+                drow == -1 && dcol == 0 ? Dir.Up :
+                drow == 0 && dcol == -1 ? Dir.Left :
+                drow == 0 && dcol == 1 ? Dir.Right :
                 this.playerDirection
         };
 

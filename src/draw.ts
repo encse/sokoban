@@ -1,19 +1,24 @@
 import {background, clearScreen, goHome, hideCursor} from "./util/ansi";
-import {darkenColor, hexToRgb, rgbToHex} from "./color";
-import {Cell, Level} from "./level";
+import {darkenColor, hexToRgb, Rgb, rgbToHex} from "./color";
+import {Cell, Dir, Level} from "./level";
 import {
     baseBg,
     baseCrateAtPositionBg,
     baseCrateAtPositionFg,
     baseCrateBg,
     baseCrateFg,
-    baseFg, baseWallBg, baseWallFg, crateTile,
+    baseFg,
+    baseWallBg,
+    baseWallFg,
+    crateTile,
     goalSprite,
     playerSprites,
     tileHeight,
-    tileWidth, wallTile
+    tileWidth,
+    wallTile
 } from "./tiles";
 import {Random} from "./util/pick";
+import {Position} from "./position";
 
 type Paxel = {
     ch: string;
@@ -59,6 +64,214 @@ function init(level: Level): Paxel[][]{
     return pss;
 }
 
+
+const visibilityCache = new Map<string, boolean>();
+
+type Cone = {
+    readonly dx: number;
+    readonly dy: number;
+    readonly dz: number;
+    readonly theta: number;
+}
+type Light = {
+    readonly color: Rgb;
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+    readonly direction: Cone | null;
+}
+
+
+
+function drawLight(random: Random, level: Level, pss: Paxel[][]) {
+    const lights: Light[] = [];
+    for (let row = 0; row < level.height; row++) {
+        for (let column = 0; column < level.width; column++) {
+            const p = new Position(row, column);
+            const n = [
+                level.getCell2(p.left().above()),
+                level.getCell2(p.above()),
+                level.getCell2(p.right().above()),
+                level.getCell2(p.left()),
+                level.getCell2(p),
+                level.getCell2(p.right()),
+                level.getCell2(p.left().below()),
+                level.getCell2(p.below()),
+                level.getCell2(p.right()),
+            ];
+
+            if (random.next() < 0.1 && n.filter(x => x !== Cell.Wall && x !== Cell.Void).length> 5 ) {
+                lights.push({
+                    color: hexToRgb(0x222222),
+                    x: p.column * tileWidth + (tileWidth/2),
+                    y: p.row * tileHeight + (tileHeight/2),
+                    z: 5,
+                    direction: null,
+                });
+            }
+        }
+    }
+
+    lights.push({
+        y: level.playerPosition.row * tileHeight + (tileHeight / 2),
+        x: level.playerPosition.column * tileWidth + (tileWidth / 2),
+        z: 1,
+        color: hexToRgb(0xff0000),
+        direction: {
+            dx: level.playerDirection === Dir.Right ? -1 : level.playerDirection === Dir.Left ? 1 : 0,
+            dy: level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0,
+            dz: 0,
+            theta: Math.PI / 5
+        },
+    });
+
+    const visible = (x1:number, y1:number, x2:number, y2:number): boolean => {
+
+        x1 = Math.floor(x1);
+        y1 = Math.floor(y1);
+        x2 = Math.floor(x2);
+        y2 = Math.floor(y2);
+        const key = `${level.title};${x1};${y1};${x2};${y2}`;
+        const cached = visibilityCache.get(key);
+        if (cached != null){
+            return cached;
+        }
+
+        let w = x2 - x1 ;
+        let h = y2 - y1 ;
+        let dx1 = 0, dy1 = 0, dx2 = 0, dy2 = 0;
+        if (w < 0) dx1 = -1; else if (w > 0) dx1 = 1;
+        if (h < 0) dy1 = -1; else if (h > 0) dy1 = 1;
+        if (w < 0) dx2 = -1; else if (w > 0) dx2 = 1;
+
+        let longest = Math.abs(w);
+        let shortest = Math.abs(h);
+
+
+        if (!(longest > shortest)) {
+            longest = Math.abs(h);
+            shortest = Math.abs(w);
+            if (h < 0) dy2 = -1;
+            else if (h > 0) dy2 = 1;
+            dx2 = 0;
+        }
+        let numerator = longest >> 1;
+
+        let res = true;
+        for (let i=0;i<=longest;i++) {
+
+            numerator += shortest;
+            if (!(numerator < longest)) {
+                numerator -= longest ;
+                x1 += dx1;
+                y1 += dy1;
+            } else {
+                x1 += dx2;
+                y1 += dy2;
+            }
+
+            if (level.getCell(y1, x1) == Cell.Wall) {
+                res = false;
+                break;
+            }
+        }
+        visibilityCache.set(key, res);
+        return res;
+
+    };
+
+    for (let row = 0; row < level.height; row++) {
+        for (let column = 0; column < level.width; column++) {
+
+            const lighten = (color: number) => {
+                const ia = 1;
+                const rgb = hexToRgb(color);
+                const kd = {
+                    r: Math.max(1,rgb.r)/255,
+                    g: Math.max(1,rgb.g)/255,
+                    b: Math.max(1,rgb.b)/255,
+                };
+
+                const ka = kd;
+
+                const ks =  {
+                    r: .2,
+                    g: .2,
+                    b: .2
+                };
+
+                const alpha = 10;
+
+                let i = {
+                    r: ia*ka.r,
+                    g: ia*ka.g,
+                    b: ia*ka.b,
+                };
+
+                for (let light of lights) {
+                    if (!visible(column, row, light.x, light.y)) {
+                        continue;
+                    }
+
+                    const lx = light.x - (column + 0.5);
+                    const ly = (light.y - (row + 0.5)) * 2; //pixels are twice as tall than wide
+                    const lz = light.z;
+
+                    const distance = Math.sqrt(lx * lx + ly * ly + lz * lz);
+                    const d =  lz / distance; // <L',N'>  (N' = 0,0,1)
+
+                    const s =  Math.pow(lz / distance, alpha); // <R',V'> == <V',L'> == <-N', L'>
+
+                    let phi = 1;
+                    if (light.direction != null) {
+                       phi =  -(lx * light.direction.dx + ly * light.direction.dy + lz * light.direction.dz) / distance;
+                      if (phi < Math.cos(light.direction.theta)){
+                          phi = 0;
+                      } else {
+                          phi = Math.pow(phi, 0.0001);
+                      }
+                    }
+                    const ild = {
+                        r: 5*light.color.r / 255 * phi,
+                        g: 5*light.color.g / 255 * phi,
+                        b: 5*light.color.b / 255 * phi
+                    };
+                    const ils = ild;
+
+                    const a = 1;
+                    const b = 0;
+                    const c = 0.001;
+                    i.r += kd.r * d * ild.r * (1/(a+b*distance+c*distance*distance));
+                    i.r += ks.r * s * ils.r * (1/(a+b*distance+c*distance*distance));
+
+                    i.g += kd.g * d * ild.g * (1/(a+b*distance+c*distance*distance));
+                    i.g += ks.g * s * ils.g * (1/(a+b*distance+c*distance*distance));
+
+                    i.b += kd.b * d * ild.b * (1/(a+b*distance+c*distance*distance));
+                    i.b += ks.b * s * ils.b * (1/(a+b*distance+c*distance*distance));
+                //     if(row == 10){
+                //         console.log(column, d, i.r);
+                //     }
+                }
+
+                return rgbToHex({
+                    r: i.r * 255,
+                    g: i.g * 255,
+                    b: i.b * 255,
+                });
+            };
+
+            if(level.getCell(row, column) !== Cell.Void){
+                let p = pss[row][column];
+                pss[row][column] = {...p, fg: lighten(p.fg), bg: lighten(p.bg)}
+            }
+        }
+    }
+
+    // for(let light of lights) {
+    //     print(pss, 'x', Math.floor(light.y), Math.floor(light.x), 0x0000ff);
+    // }
+}
 function drawGround(random: Random, level: Level, pss: Paxel[][]) {
 
     let fg = fuzzyColor(random, baseFg);
@@ -125,6 +338,7 @@ export function draw(level: Level) {
     drawCrates(random, level, pss);
     drawPlayer(random, level, pss);
     drawWalls(random, level, pss);
+    drawLight(random, level, pss);
 
     if (levelPrev !=null && (levelPrev.width !== level.width || levelPrev.height !== level.height)) {
         pssPrev = null;
@@ -150,7 +364,7 @@ export function draw(level: Level) {
     pssPrev = pss;
     levelPrev = level;
 
-    process.stdout.write(st);
+   process.stdout.write(st);
 }
 
 
@@ -291,7 +505,7 @@ function drawGoals(random: Random, level: Level,pss: Paxel[][]) {
     }
 }
 
-function drawPlayer(random: Random, level: Level,pss: Paxel[][]) {
+function drawPlayer(_random: Random, level: Level,pss: Paxel[][]) {
 
     let irow = level.playerPosition.row;
     let icol = level.playerPosition.column;
@@ -310,14 +524,10 @@ function drawPlayer(random: Random, level: Level,pss: Paxel[][]) {
                 p = {...p, ch};
             }
             if (bg != ' ') {
-                p = {...p, bg: fuzzyColor(random, playerSprites.colors[bg.charCodeAt(0) - '0'.charCodeAt(0)])};
-            } else {
-                fuzzyColor(random, 0xffffff);
+                p = {...p, bg: playerSprites.colors[bg.charCodeAt(0) - '0'.charCodeAt(0)]};
             }
             if (fg != ' ') {
-                p = {...p, fg: fuzzyColor(random, playerSprites.colors[fg.charCodeAt(0) - '0'.charCodeAt(0)])};
-            } else {
-                fuzzyColor(random, 0xffffff);
+                p = {...p, fg: playerSprites.colors[fg.charCodeAt(0) - '0'.charCodeAt(0)]};
             }
             pss[irow * tileHeight + tileRow][icol * tileWidth+ tileCol] = p;
         }

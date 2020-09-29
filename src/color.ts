@@ -1,6 +1,6 @@
 
-export type Rgb = {r:number, g: number, b: number};
-export type Hsl = {h:number, s: number, l: number};
+export type Rgb = {readonly r:number, readonly g: number, readonly b: number};
+export type Hsl = {readonly h:number, readonly s: number, readonly l: number};
 
 export function hexToRgb(color: number): Rgb {
     return {
@@ -10,10 +10,12 @@ export function hexToRgb(color: number): Rgb {
     };
 }
 
+
+
 export function rgbToHex(rgb: Rgb): number {
-    const r=clamp(rgb.r);
-    const g=clamp(rgb.g);
-    const b=clamp(rgb.b);
+    const r=clamp(Math.round(rgb.r));
+    const g=clamp(Math.round(rgb.g));
+    const b=clamp(Math.round(rgb.b));
     return (r << 16) + (g << 8) + (b);
 }
 
