@@ -75,6 +75,6 @@ process.stdin.on("data", (data) => {
     }
 });
 
-//setInterval(()=>updateLevel(level => level.tick()), 1000);
+setInterval(()=>updateLevel(level => level.tick()), 100);
 
 draw(currentLevel);

@@ -92,6 +92,8 @@ function findVoids(map: string[],crow: number, ccol: number, ): Position[] {
     return voids;
 }
 
+const visibilityCache = new Map<string, boolean>();
+
 
 export class Level {
 
@@ -320,4 +322,60 @@ export class Level {
     visitedVert(row: number, column: number) {
         return this.state.visitedVert.get(this.getKey(row, column)) ?? 0;
     }
+
+
+    visible(x1:number, y1:number, x2:number, y2:number): boolean {
+
+        x1 = Math.floor(x1);
+        y1 = Math.floor(y1);
+        x2 = Math.floor(x2);
+        y2 = Math.floor(y2);
+        const key = `${this.title};${x1};${y1};${x2};${y2}`;
+        const cached = visibilityCache.get(key);
+        if (cached != null){
+            return cached;
+        }
+
+        let w = x2 - x1 ;
+        let h = y2 - y1 ;
+        let dx1 = 0, dy1 = 0, dx2 = 0, dy2 = 0;
+        if (w < 0) dx1 = -1; else if (w > 0) dx1 = 1;
+        if (h < 0) dy1 = -1; else if (h > 0) dy1 = 1;
+        if (w < 0) dx2 = -1; else if (w > 0) dx2 = 1;
+
+        let longest = Math.abs(w);
+        let shortest = Math.abs(h);
+
+
+        if (!(longest > shortest)) {
+            longest = Math.abs(h);
+            shortest = Math.abs(w);
+            if (h < 0) dy2 = -1;
+            else if (h > 0) dy2 = 1;
+            dx2 = 0;
+        }
+        let numerator = longest >> 1;
+
+        let res = true;
+        for (let i=0;i<=longest;i++) {
+
+            numerator += shortest;
+            if (!(numerator < longest)) {
+                numerator -= longest ;
+                x1 += dx1;
+                y1 += dy1;
+            } else {
+                x1 += dx2;
+                y1 += dy2;
+            }
+
+            if (this.getCell(y1, x1) == Cell.Wall) {
+                res = false;
+                break;
+            }
+        }
+        visibilityCache.set(key, res);
+        return res;
+
+    };
 }
