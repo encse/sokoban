@@ -1,16 +1,18 @@
 import {clearScreen, showCursor} from "./util/ansi";
 import {draw} from "./draw";
-import {loadLevelData} from "./levelData";
+import {loadPuzzleCollection} from "./puzzle";
 import {Level} from "./level";
+import * as fs from "fs";
 
-const levelData = loadLevelData("resources/levels.txt");
+const puzzleCollection = loadPuzzleCollection("resources/original_and_extra.sok");
+const saveFile = "resources/levels.sav";
 const levels = new Map<number, Level>();
 
 function getLevel(i: number): Level {
-    i = (i + levelData.length) % levelData.length;
+    i = (i + puzzleCollection.puzzles.length) % puzzleCollection.puzzles.length;
 
     if (!levels.has(i)) {
-        levels.set(i, Level.fromData(levelData[i]))
+        levels.set(i, Level.fromData(puzzleCollection.puzzles[i]))
     }
     return levels.get(i)!;
 }
@@ -26,6 +28,9 @@ function updateLevel(cb: (level: Level) => Level){
         previousLevel = newLevel;
     } else if (!newLevel.playerPosition.eq(currentLevel.playerPosition)) {
         previousLevel = currentLevel;
+        const fd = fs.openSync(saveFile, 'w');
+        fs.writeSync(fd, [...levels.values()].map(level => level.serialize()).join('\n'));
+        fs.closeSync(fd);
     }
     levels.set(levelIndex, newLevel);
     currentLevel = newLevel;
@@ -53,7 +58,7 @@ process.stdin.on("data", (data) => {
     } else if(data[0] == 122){
         levelIndex--;
         if(levelIndex < 0){
-            levelIndex += levelData.length;
+            levelIndex += puzzleCollection.puzzles.length;
         }
         updateLevel(() => getLevel(levelIndex));
     } else if(data[0] == 114){
@@ -61,8 +66,8 @@ process.stdin.on("data", (data) => {
         updateLevel(() => getLevel(levelIndex));
     } else if(data[0] == 120){
         levelIndex++;
-        if(levelIndex > levelData.length -1){
-            levelIndex-=levelData.length;
+        if(levelIndex > puzzleCollection.puzzles.length -1){
+            levelIndex-=puzzleCollection.puzzles.length;
         }
         updateLevel(() => getLevel(levelIndex));
 

@@ -11,7 +11,7 @@ import {
     baseWallBg,
     baseWallFg,
     crateTile,
-    goalSprite,
+    goalSprite, logo,
     playerSprites,
     tileHeight,
     tileWidth,
@@ -300,6 +300,7 @@ export function draw(level: Level) {
     drawCrates(random, level, pss);
     drawPlayer(random, level, pss);
     drawWalls(random, level, pss);
+    drawTile(random, level, pss, 2, 2, logo, 0,0, 0xffffff, null);
     drawLight(random, level, pss);
 
     if (levelPrev !=null && (levelPrev.width !== level.width || levelPrev.height !== level.height)) {

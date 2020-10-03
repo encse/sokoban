@@ -1,6 +1,7 @@
 import {Position} from "./position";
-import {LevelData} from "./levelData";
+import {Puzzle} from "./puzzle";
 import {tileHeight, tileWidth} from "./tiles";
+import {fail} from "./util/fail";
 
 export enum Cell {
     Wall,
@@ -21,11 +22,11 @@ export enum Dir {
 const horiz = (dir: Dir) => dir === Dir.Left || dir === Dir.Right;
 const vert = (dir: Dir) => !horiz(dir);
 
-
 type State = {
     readonly time: number;
     readonly author: string;
     readonly title: string;
+    readonly board: string;
     readonly ccol: number;
     readonly crow: number;
     readonly goalPositions: readonly Position[];
@@ -37,6 +38,7 @@ type State = {
     readonly completed: boolean;
     readonly steps: number;
     readonly pushes: number;
+    readonly history: string;
     readonly visitedHoriz: ReadonlyMap<string, number>;
     readonly visitedVert: ReadonlyMap<string, number>;
 }
@@ -126,24 +128,26 @@ export class Level {
 
     }
 
-    public static fromData(levelData: LevelData):Level{
-        const map = levelData.map.split('\n');
-        const ccol= Math.max(...map.map(x => x.length));
-        const crow = map.length;
+    public static fromData(puzzle: Puzzle):Level{
+        const board = puzzle.board.split('\n');
+        const ccol= Math.max(...board.map(x => x.length));
+        const crow = board.length;
         return new Level({
             ccol : ccol,
             crow : crow,
-            title : levelData.title,
-            author: levelData.author,
-            playerPosition: find(map, crow, ccol, '@')[0],
-            wallPositions: find(map, crow, ccol, '#'),
-            goalPositions: find(map, crow, ccol, '.'),
-            voidPositions: findVoids(map, crow, ccol),
+            board : puzzle.board,
+            title : puzzle.title ?? "",
+            author: puzzle.author ?? "",
+            playerPosition: find(board, crow, ccol, '@')[0],
+            wallPositions: find(board, crow, ccol, '#'),
+            goalPositions: find(board, crow, ccol, '.'),
+            voidPositions: findVoids(board, crow, ccol),
             completed:false,
-            cratePositions: find(map, crow, ccol, '$'),
+            cratePositions: find(board, crow, ccol, '$'),
             playerDirection: Dir.Right,
             steps: 0,
             pushes: 0,
+            history: '',
             time: 0,
             visitedHoriz: new Map<string, number>(),
             visitedVert: new Map<string, number>()
@@ -188,6 +192,12 @@ export class Level {
         let newState: State = oldState;
         const newPosition = this.playerPosition.move(drow, dcol);
 
+        let step =
+            drow == 0 && dcol == 1 ? 'r' :
+            drow == 0 && dcol == -1 ? 'l' :
+            drow == 1 && dcol == 0 ? 'd' :
+            drow == -1 && dcol == 0 ? 'u' :
+            fail();
 
         switch (this.getCell2(newPosition)) {
             case Cell.Wall:
@@ -199,6 +209,7 @@ export class Level {
                     const icrate = this.cratePositions.findIndex(crate => crate.eq(newPosition));
                     const newCratePositions = this.cratePositions.map((cratePosition, i) => i == icrate ? newCratePosition : cratePosition);
                     const newCompleted = newCratePositions.every(cratePosition => this.isGoal(cratePosition));
+                    step = step.toUpperCase();
                     newState = {
                         ...newState,
                         pushes: this.pushes + 1,
@@ -272,12 +283,15 @@ export class Level {
         }
 
         if (!oldState.playerPosition.eq(newState.playerPosition)) {
+
+            newState = {...newState, history: newState.history + step};
             if (horiz(newState.playerDirection)) {
                 newState = incHoriz(newState, newState.playerPosition);
             } else {
                 newState = incVert(newState, newState.playerPosition);
             }
         }
+
 
         return new Level(newState);
     }
@@ -378,4 +392,16 @@ export class Level {
         return res;
 
     };
+
+    serialize() {
+        return [
+            this.state.title,
+            "",
+            this.state.board,
+            `Author: ${this.state.author}`,
+            `Snapshot`,
+            this.state.history,
+            `\n`,
+        ].join('\n');
+    }
 }
