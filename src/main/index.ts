@@ -8,6 +8,8 @@ const puzzleCollection = loadPuzzleCollection("resources/original_and_extra.sok"
 const saveFile = "resources/levels.sav";
 const levels = new Map<number, Level>();
 
+
+
 function getLevel(i: number): Level {
     i = (i + puzzleCollection.puzzles.length) % puzzleCollection.puzzles.length;
 
@@ -34,7 +36,7 @@ function updateLevel(cb: (level: Level) => Level){
     }
     levels.set(levelIndex, newLevel);
     currentLevel = newLevel;
-    draw(currentLevel);
+    draw(currentLevel, false);
 }
 
 process.stdin.setRawMode(true);
@@ -80,6 +82,10 @@ process.stdin.on("data", (data) => {
     }
 });
 
-setInterval(()=>updateLevel(level => level.tick()), 100);
 
-draw(currentLevel);
+draw(currentLevel, true);
+
+setTimeout(()=>{
+    setInterval(()=>updateLevel(level => level.tick()), 1000);
+}, 5000);
+

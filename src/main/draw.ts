@@ -54,16 +54,23 @@ function paxel(ch: string, fg: number, bg: number): Paxel{
 
 let pssPrev: Paxel[][] | null = null;
 let levelPrev: Level | null = null;
+let showLogoPrev: boolean | null = null;
 
-function init(level: Level): Paxel[][]{
+function init(_level: Level): Paxel[][]{
     const pss: Paxel[][] = [];
 
-    for (let row = 0; row < level.height + 1; row++) {
-        pss.push([]);
+    const columns = process.stdout.columns;
+    const rows = process.stdout.rows;
+
+    for (let irow = 0; irow < rows; irow++) {
+        const row: Paxel[] = [];
+        pss.push(row);
+        for (let icol = 0; icol < columns; icol++) {
+            row.push(paxel(' ', 0,0));
+        }
     }
     return pss;
 }
-
 
 
 type Cone = {
@@ -290,7 +297,29 @@ function drawTrack(_random: Random, level: Level, pss: Paxel[][]) {
 }
 
 
-export function draw(level: Level) {
+
+// https://umumble.com/blogs/gdev/pixel_by_pixel-screen-fills-in-wolfenstein-3d/
+function* fizzleFade(width: number, height: number): Iterable<[number, number]> {
+    let x: number;
+    let y: number;
+
+    let rndval = 1;
+    do {
+        y = (rndval & 0x000FF) - 1; // low 8 bits - 1 = coordinate y
+        x = (rndval & 0x1FF00) >> 8; // next 9 bits = coordinate x
+        let lsb = rndval & 1; // the least significant bit is lost when shifted
+        rndval >>= 1;
+        if (lsb) // if the extended bit = 0, then do not xor
+            rndval ^= 0x00012000;
+
+        if (0 <= x && x < width && 0 <= y && y < height) {
+            yield [x, y];
+        }
+    } while (rndval != 1);
+}
+
+
+export function draw(level: Level, showLogo: boolean) {
     const random = new Random(0);
     const pss = init(level);
     drawGround(random, level, pss);
@@ -300,34 +329,52 @@ export function draw(level: Level) {
     drawCrates(random, level, pss);
     drawPlayer(random, level, pss);
     drawWalls(random, level, pss);
-    drawTile(random, level, pss, 2, 2, logo, 0,0, 0xffffff, null);
+    if (showLogo) {
+        drawTile(random, level, pss, 2, 2, logo, 0, 0, 0xffffff, null);
+    }
     drawLight(random, level, pss);
 
-    if (levelPrev !=null && (levelPrev.width !== level.width || levelPrev.height !== level.height)) {
+    if(showLogo !== showLogoPrev){
         pssPrev = null;
     }
-    let st = '';
-    if (pssPrev == null) {
-        st += `${clearScreen}${goHome}${hideCursor}`;
+    if (levelPrev?.title != level?.title) {
+        pssPrev = null;
     }
+
 
     const fmt = (num: number) => num.toString(10).padStart(4, '0');
     print(pss, `${level.title}    Steps: ${fmt(level.steps)}    Pushes: ${fmt(level.pushes)}    Time: ${fmt(level.time)}`, 0,0, 0xffffff);
-    for(let irow=0;irow<pss.length;irow++){
-        for(let icol = 0;icol<pss[0].length;icol++){
-            const prev = pssPrev?.[irow]?.[icol];
+
+    if (pssPrev == null) {
+        process.stdout.write(`${goHome}${hideCursor}`);
+        for(let [icol, irow] of fizzleFade(pss[0].length, pss.length)){
             const p = pss[irow][icol] ?? {ch: ' ', fg: 0, bg: 0};
-            if(p.ch != prev?.ch || p.fg != prev?.fg || p.bg != prev?.bg) {
-                st += `\x1b[${irow+1};${icol+1}H`;
-                st += background(p.ch, p.fg, p.bg);
+            let st = `\x1b[${irow + 1};${icol + 1}H`;
+            st += background(p.ch, p.fg, p.bg);
+            process.stdout.write(st);
+            for(let i = 0;i<50000;i++){
+                ;//spin
             }
         }
+    } else {
+        let st = '';
+        for (let irow = 0; irow < pss.length; irow++) {
+            for (let icol = 0; icol < pss[0].length; icol++) {
+                const prev = pssPrev?.[irow]?.[icol];
+                const p = pss[irow][icol] ?? {ch: ' ', fg: 0, bg: 0};
+                if (p.ch != prev?.ch || p.fg != prev?.fg || p.bg != prev?.bg) {
+                    st += `\x1b[${irow + 1};${icol + 1}H`;
+                    st += background(p.ch, p.fg, p.bg);
+                }
+            }
+        }
+        process.stdout.write(st);
     }
 
     pssPrev = pss;
+    showLogoPrev = showLogo;
     levelPrev = level;
 
-   process.stdout.write(st);
 }
 
 
