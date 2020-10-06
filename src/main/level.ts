@@ -1,4 +1,4 @@
-import {Position} from "./position";
+import {Position, Rectangle} from "./position";
 import {Puzzle} from "./puzzle";
 import {tileHeight, tileWidth} from "./tiles";
 import {fail} from "./util/fail";
@@ -29,11 +29,11 @@ type State = {
     readonly board: string;
     readonly ccol: number;
     readonly crow: number;
-    readonly goalPositions: readonly Position[];
-    readonly wallPositions: readonly Position[];
-    readonly voidPositions: readonly Position[];
-    readonly cratePositions: readonly Position[];
-    readonly playerPosition: Position;
+    readonly goalRectangles: readonly Rectangle[];
+    readonly wallRectangles: readonly Rectangle[];
+    readonly voidRectangles: readonly Rectangle[];
+    readonly crateRectangles: readonly Rectangle[];
+    readonly playerRectangle: Rectangle;
     readonly playerDirection: Dir;
     readonly completed: boolean;
     readonly steps: number;
@@ -54,39 +54,40 @@ function* positions(crow: number, ccol: number): Iterable<Position> {
 
 
 function  getCh(map: string[], position: Position): string {
-    const {row, column} = position;
-    if (row >= 0 && row < map.length && column >= 0 && column < map[row].length) {
-        return map[row][column];
+    const {row, col} = position;
+    if (row >= 0 && row < map.length && col >= 0 && col < map[row].length) {
+        return map[row][col];
     }
     return ' ';
 }
 
 
-function find(map: string[], crow: number, ccol: number, ch: string): Position[] {
-    return [...positions(crow, ccol)].filter(pos => getCh(map, pos) === ch);
+function find(map: string[], crow: number, ccol: number, ch: string): Rectangle[] {
+    return [...positions(crow, ccol)].filter(pos => getCh(map, pos) === ch).map(pos => new Rectangle(pos.row*tileHeight, pos.col*tileWidth, tileHeight, tileWidth));
 }
 
-function findVoids(map: string[],crow: number, ccol: number, ): Position[] {
-    const voids: Position[] = [];
+function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
+    const voids: Rectangle[] = [];
     let ps = new Set(positions(crow, ccol));
 
-    const has = (p: Position) => voids.some(v => v.eq(p));
+    const has = (p: Position) => voids.some(v => v.contains(p));
     let any = true;
     while (any) {
         any = false;
-        for (let p of [...ps]) {
+        for (let p of ps) {
+            const topLeft = new Position(p.row * tileHeight, p.col * tileWidth);
             if (getCh(map, p) == ' ' && (
-                p.column == 0 ||
-                p.column == map[p.row].length - 1 ||
+                p.col == 0 ||
+                p.col == map[p.row].length - 1 ||
                 p.row == 0 ||
                 p.row == map.length - 1 ||
-                has(p.above()) ||
-                has(p.below()) ||
-                has(p.left()) ||
-                has(p.right()))
-            ) {
+                has(topLeft.moveTile(-1,0)) ||
+                has(topLeft.moveTile(1,0)) ||
+                has(topLeft.moveTile(0,-1)) ||
+                has(topLeft.moveTile(0,1))
+            )) {
                 ps.delete(p);
-                voids.push(p);
+                voids.push(new Rectangle(topLeft.row, topLeft.col, tileHeight, tileWidth));
                 any = true;
             }
         }
@@ -101,27 +102,23 @@ export class Level {
 
     public get author() {return this.state.author;}
     public get title() {return this.state.title;}
-    public get ccol() {return this.state.ccol;}
-    public get crow() {return this.state.crow;}
-    public get goalPositions() {return this.state.goalPositions;}
-    public get wallPositions() {return this.state.wallPositions;}
-    public get cratePositions() {return this.state.cratePositions;}
-    public get voidPositions() {return this.state.voidPositions;}
-    public get playerPosition() {return this.state.playerPosition;}
+    public get goalRectangles() {return this.state.goalRectangles;}
+    public get wallRectangles() {return this.state.wallRectangles;}
+    public get crateRectangles() {return this.state.crateRectangles;}
+    public get voidRectangles() {return this.state.voidRectangles;}
+    public get playerRectangle() {return this.state.playerRectangle;}
     public get playerDirection() {return this.state.playerDirection;}
     public get steps() {return this.state.steps;}
     public get pushes() {return this.state.pushes;}
     public get time() {return this.state.time;}
     public get completed() {return this.state.completed;}
 
-
-
     get width() {
-        return this.ccol * tileWidth;
+        return this.state.ccol * tileWidth;
     };
 
     get height() {
-        return this.crow * tileHeight;
+        return this.state.crow * tileHeight;
     };
 
     private constructor(private readonly state: State) {
@@ -138,12 +135,12 @@ export class Level {
             board : puzzle.board,
             title : puzzle.title ?? "",
             author: puzzle.author ?? "",
-            playerPosition: find(board, crow, ccol, '@')[0],
-            wallPositions: find(board, crow, ccol, '#'),
-            goalPositions: find(board, crow, ccol, '.'),
-            voidPositions: findVoids(board, crow, ccol),
+            playerRectangle: find(board, crow, ccol, '@')[0],
+            wallRectangles: find(board, crow, ccol, '#'),
+            goalRectangles: find(board, crow, ccol, '.'),
+            voidRectangles: findVoids(board, crow, ccol),
             completed:false,
-            cratePositions: find(board, crow, ccol, '$'),
+            crateRectangles: find(board, crow, ccol, '$'),
             playerDirection: Dir.Right,
             steps: 0,
             pushes: 0,
@@ -153,22 +150,24 @@ export class Level {
             visitedVert: new Map<string, number>()
         });
     }
+
     isGoal(pos: Position) {
-        return this.goalPositions.some(goal => goal.eq(pos));
+        return this.goalRectangles.some(goal => goal.contains(pos));
     }
 
     isWall(pos: Position) {
-        return this.wallPositions.some(wall => wall.eq(pos));
+        return this.wallRectangles.some(wall => wall.contains(pos));
     }
 
     isCrate(pos: Position) {
-        return this.cratePositions.some(crates => crates.eq(pos));
+        return this.crateRectangles.some(crates => crates.contains(pos));
     }
 
-    public getCell2(pos: Position): Cell {
+    public getCell(pos: Position): Cell {
+
         if (!this.validPos(pos)) {
             return Cell.Void;
-        } else if (this.playerPosition.eq(pos)) {
+        } else if (this.playerRectangle.contains(pos)) {
             return Cell.Player;
         } else if (this.isWall(pos)) {
             return Cell.Wall;
@@ -181,16 +180,10 @@ export class Level {
         }
     }
 
-    getCell(row: number, column: number): Cell {
-
-        const pos = new Position(Math.floor(row / tileHeight), Math.floor(column / tileWidth));
-        return this.getCell2(pos);
-    }
-
-    move(drow: number, dcol: number) {
+    moveTile(drow: number, dcol: number) {
         let oldState = this.state;
         let newState: State = oldState;
-        const newPosition = this.playerPosition.move(drow, dcol);
+        const newPlayerRectangle = this.playerRectangle.moveTile(drow, dcol);
 
         let step =
             drow == 0 && dcol == 1 ? 'r' :
@@ -199,23 +192,23 @@ export class Level {
             drow == -1 && dcol == 0 ? 'u' :
             fail();
 
-        switch (this.getCell2(newPosition)) {
+        switch (this.getCell(newPlayerRectangle.center)) {
             case Cell.Wall:
             case Cell.Player:
                 break;
             case Cell.Crate:
-                const newCratePosition = this.playerPosition.move(2 * drow, 2 * dcol);
-                if (!this.completed && !this.isWall(newCratePosition) && !this.isCrate(newCratePosition)) {
-                    const icrate = this.cratePositions.findIndex(crate => crate.eq(newPosition));
-                    const newCratePositions = this.cratePositions.map((cratePosition, i) => i == icrate ? newCratePosition : cratePosition);
-                    const newCompleted = newCratePositions.every(cratePosition => this.isGoal(cratePosition));
+                const newCratePosition = this.playerRectangle.moveTile(2 * drow, 2 * dcol);
+                if (!this.completed && !this.isWall(newCratePosition.center) && !this.isCrate(newCratePosition.center)) {
+                    const icrate = this.crateRectangles.findIndex(crate => crate.contains(newPlayerRectangle.center));
+                    const newCratePositions = this.crateRectangles.map((cratePosition, i) => i == icrate ? newCratePosition : cratePosition);
+                    const newCompleted = newCratePositions.every(cratePosition => this.isGoal(cratePosition.center));
                     step = step.toUpperCase();
                     newState = {
                         ...newState,
                         pushes: this.pushes + 1,
                         steps: this.steps + 1,
-                        playerPosition: newPosition,
-                        cratePositions: newCratePositions,
+                        playerRectangle: newPlayerRectangle,
+                        crateRectangles: newCratePositions,
                         completed: newCompleted,
                     };
                 }
@@ -225,31 +218,31 @@ export class Level {
             case Cell.Void:
                 newState = {
                     ...newState,
-                    playerPosition: newPosition,
+                    playerRectangle: newPlayerRectangle,
                     steps: this.steps + 1,
                 };
                 break;
         }
 
 
-        const inc = (map: ReadonlyMap<string, number>, position: Position): ReadonlyMap<string, number> => {
-            const key = this.getKey(position.row, position.column);
+        const inc = (map: ReadonlyMap<string, number>, rectangle: Rectangle): ReadonlyMap<string, number> => {
+            const key = this.getKey(rectangle.center.row, rectangle.center.col);
             const res = new Map<string, number>(map.entries());
             res.set(key, (map.get(key) ?? 0) + 1);
             return res;
         };
 
-        const incHoriz = (state: State, position: Position) => {
+        const incHoriz = (state: State, rectangle: Rectangle) => {
             return  {
                 ...state,
-                visitedHoriz: inc(state.visitedHoriz, position)
+                visitedHoriz: inc(state.visitedHoriz, rectangle)
             }
         };
 
-        const incVert = (state: State, position: Position) => {
+        const incVert = (state: State, rectangle: Rectangle) => {
             return  {
                 ...state,
-                visitedVert: inc(state.visitedVert, position)
+                visitedVert: inc(state.visitedVert, rectangle)
             }
         };
 
@@ -267,28 +260,28 @@ export class Level {
         if (newState.playerDirection !== oldState.playerDirection) {
             if (vert(oldState.playerDirection)) {
                 if (horiz(newState.playerDirection)){
-                    newState = incHoriz(newState, oldState.playerPosition);
+                    newState = incHoriz(newState, oldState.playerRectangle);
                 } else {
-                    newState = incHoriz(newState, oldState.playerPosition);
-                    newState = incVert(newState, oldState.playerPosition);
+                    newState = incHoriz(newState, oldState.playerRectangle);
+                    newState = incVert(newState, oldState.playerRectangle);
                 }
             } else {
                 if (vert(newState.playerDirection)){
-                    newState = incVert(newState, oldState.playerPosition);
+                    newState = incVert(newState, oldState.playerRectangle);
                 } else {
-                    newState = incVert(newState, oldState.playerPosition);
-                    newState = incHoriz(newState, oldState.playerPosition);
+                    newState = incVert(newState, oldState.playerRectangle);
+                    newState = incHoriz(newState, oldState.playerRectangle);
                 }
             }
         }
 
-        if (!oldState.playerPosition.eq(newState.playerPosition)) {
+        if (!oldState.playerRectangle.eq(newState.playerRectangle)) {
 
             newState = {...newState, history: newState.history + step};
             if (horiz(newState.playerDirection)) {
-                newState = incHoriz(newState, newState.playerPosition);
+                newState = incHoriz(newState, newState.playerRectangle);
             } else {
-                newState = incVert(newState, newState.playerPosition);
+                newState = incVert(newState, newState.playerRectangle);
             }
         }
 
@@ -301,30 +294,29 @@ export class Level {
     }
 
     left() {
-        return this.move(0, -1);
+        return this.moveTile(0, -1);
     }
 
     right() {
-        return this.move(0, 1);
+        return this.moveTile(0, 1);
     }
 
     up() {
-        return this.move(-1, 0);
+        return this.moveTile(-1, 0);
     }
 
     down() {
-        return this.move(1, 0);
+        return this.moveTile(1, 0);
     }
 
     private validPos(pos: Position): boolean {
-        const {row, column} = pos;
+        const {row, col} = pos;
         return (
-            row >= 0 && row < this.crow &&
-            column >= 0 && column < this.ccol &&
-            !this.voidPositions.some(p => p.eq(pos))
+            row >= 0 && row < this.height &&
+            col >= 0 && col < this.width &&
+            !this.voidRectangles.some(p => p.contains(pos))
         );
     }
-
 
     tick() {
         return this.completed || this.steps == 0 ? this : new Level({...this.state, time: this.state.time+1});
@@ -383,7 +375,7 @@ export class Level {
                 y1 += dy2;
             }
 
-            if (this.getCell(y1, x1) == Cell.Wall) {
+            if (this.getCell(new Position(y1, x1)) == Cell.Wall) {
                 res = false;
                 break;
             }
