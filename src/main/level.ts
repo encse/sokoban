@@ -1,7 +1,10 @@
 import {Position, Rectangle} from "./position";
 import {Puzzle} from "./puzzle";
-import {tileHeight, tileWidth} from "./tiles";
+import {baseBg, baseFg, tileHeight, tileWidth} from "./tiles";
 import {fail} from "./util/fail";
+import {draw, fuzzyColor, Light, paxel, Paxel} from "./draw";
+import {hexToRgb} from "./color";
+import {Random} from "./util/pick";
 
 export enum Cell {
     Wall,
@@ -35,7 +38,9 @@ type State = {
     readonly crateRectangles: readonly Rectangle[];
     readonly playerRectangle: Rectangle;
     readonly playerDirection: Dir;
+    readonly lights: readonly Light[];
     readonly completed: boolean;
+    readonly ground: Tile;
     readonly steps: number;
     readonly pushes: number;
     readonly history: string;
@@ -98,6 +103,96 @@ function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
 const visibilityCache = new Map<string, boolean>();
 
 
+function createLights(level: Level, crow: number, ccol: number): Light[] {
+    const lights: Light[] = [];
+    for (let row = 0; row < crow; row++) {
+        for (let column = 0; column < ccol; column++) {
+            const p = new Position(row * tileHeight + tileHeight/2, column * tileWidth+tileWidth/2);
+            const n = [
+                level.getCell(p.moveTile(-1, -1)),
+                level.getCell(p.moveTile(-1,  0)),
+                level.getCell(p.moveTile(-1,  1)),
+                level.getCell(p.moveTile( 0, -1)),
+                level.getCell(p),
+                level.getCell(p.moveTile( 0,  1)),
+                level.getCell(p.moveTile( 1, -1)),
+                level.getCell(p.moveTile( 1,  0)),
+                level.getCell(p.moveTile( 1,  1)),
+            ];
+
+            if (Math.random() < 0.05 && n.filter(x => x !== Cell.Wall && x !== Cell.Void).length > 5 ) {
+                lights.push({
+                    color: hexToRgb(0x555555),
+                    x: p.col,
+                    y: p.row,
+                    z: 3 * tileWidth,
+                    direction: null,
+                });
+            }
+        }
+    }
+
+    // lights.push({
+    //     x: level.playerRectangle.col * tileWidth + 4 +
+    //         (level.playerDirection === Dir.Right ? -3 : level.playerDirection === Dir.Left ? 3 : 0),
+    //     y: level.playerRectangle.row * tileHeight + 1.5 +
+    //         (level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0),
+    //     z: 1,
+    //     color: hexToRgb(0x440000),
+    //     direction: {
+    //         x: level.playerDirection === Dir.Right ? -1 : level.playerDirection === Dir.Left ? 1 : 0,
+    //         y: level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0,
+    //         z: -0.2,
+    //         cosTheta: Math.cos(Math.PI/3)
+    //     },
+    // });
+    return lights;
+}
+
+export type Tile = {ch?: string, bg?: number, fg?:number}[][];
+
+function createGround(random: Random, level: Level): Tile {
+    let ch = random.pick('▓▒░ '.split(''));
+    let prevVoid = true;
+    const tile: Tile = [];
+    for (let row = 0; row < level.height; row++) {
+        let fg: number = 0;
+        let bg: number = 0;
+        const pss: Paxel[] = [];
+        tile.push(pss);
+        for (let column = 0; column < level.width; column++) {
+            let cell = level.getCell(new Position(row, column));
+            const isVoid = cell == Cell.Void;
+            if (column % 2 == 0 || prevVoid !== isVoid) {
+                fg = fuzzyColor(random, baseFg);
+                bg = isVoid ? 0 : fuzzyColor(random, baseBg);
+                ch = isVoid ? ' ' : random.pick('▓▒░ '.split(''));
+            }
+            prevVoid = isVoid;
+            pss.push(paxel(ch, fg, bg));
+        }
+    }
+
+    return tile;
+}
+
+function playerLight(level: Level): Light {
+    return {
+        x: level.playerRectangle.col + 4 +
+            (level.playerDirection === Dir.Right ? -3 : level.playerDirection === Dir.Left ? 3 : 0),
+        y: level.playerRectangle.row + 1.5 +
+            (level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0),
+        z: 1,
+        color: hexToRgb(0x440000),
+        direction: {
+            x: level.playerDirection === Dir.Right ? -1 : level.playerDirection === Dir.Left ? 1 : 0,
+            y: level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0,
+            z: -0.2,
+            cosTheta: Math.cos(Math.PI / 3)
+        },
+    };
+}
+
 export class Level {
 
     public get author() {return this.state.author;}
@@ -108,10 +203,14 @@ export class Level {
     public get voidRectangles() {return this.state.voidRectangles;}
     public get playerRectangle() {return this.state.playerRectangle;}
     public get playerDirection() {return this.state.playerDirection;}
+    public get lights() {
+        return [...this.state.lights, playerLight(this)];
+    };
     public get steps() {return this.state.steps;}
     public get pushes() {return this.state.pushes;}
     public get time() {return this.state.time;}
     public get completed() {return this.state.completed;}
+    public get ground() { return this.state.ground; }
 
     get width() {
         return this.state.ccol * tileWidth;
@@ -129,7 +228,7 @@ export class Level {
         const board = puzzle.board.split('\n');
         const ccol= Math.max(...board.map(x => x.length));
         const crow = board.length;
-        return new Level({
+        const level = new Level({
             ccol : ccol,
             crow : crow,
             board : puzzle.board,
@@ -142,12 +241,20 @@ export class Level {
             completed:false,
             crateRectangles: find(board, crow, ccol, '$'),
             playerDirection: Dir.Right,
+            ground: [],
+            lights: [],
             steps: 0,
             pushes: 0,
             history: '',
             time: 0,
             visitedHoriz: new Map<string, number>(),
             visitedVert: new Map<string, number>()
+        });
+        const random = new Random(0);
+        return new Level({
+            ...level.state,
+            lights: createLights(level, crow, ccol),
+            ground: createGround(random, level)
         });
     }
 

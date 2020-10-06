@@ -1,6 +1,6 @@
 import {background, goHome, hideCursor} from "./util/ansi";
 import {darkenColor, hexToRgb, Rgb, rgbToHex} from "./color";
-import {Cell, Dir, Level} from "./level";
+import {Cell, Dir, Level, Tile} from "./level";
 import {
     baseBg,
     baseCrateAtPositionBg,
@@ -21,13 +21,13 @@ import {
 import {Random} from "./util/pick";
 import {Position} from "./position";
 
-type Paxel = {
+export type Paxel = {
     ch: string;
     bg: number;
     fg: number;
 }
 
-function fuzzyColor(random: Random, color: number): number {
+export function fuzzyColor(random: Random, color: number): number {
     let rand = random.next();
 
     let d =
@@ -44,7 +44,7 @@ function fuzzyColor(random: Random, color: number): number {
     })
 }
 
-function paxel(ch: string, fg: number, bg: number): Paxel{
+export function paxel(ch: string, fg: number, bg: number): Paxel{
 
     return {
         ch: ch,
@@ -56,6 +56,24 @@ function paxel(ch: string, fg: number, bg: number): Paxel{
 let pssPrev: Paxel[][] | null = null;
 let levelPrev: Level | null = null;
 let showLogoPrev: boolean | null = null;
+let prevTerminalHeight: number | null = null;
+let prevTerminalWidth: number | null = null;
+
+
+type Cone = {
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+    readonly cosTheta: number;
+}
+export type Light = {
+    readonly color: Rgb;
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+    readonly direction: Cone | null;
+}
+
 
 function init(level: Level): Paxel[][]{
     const pss: Paxel[][] = [];
@@ -73,179 +91,99 @@ function init(level: Level): Paxel[][]{
     return pss;
 }
 
+function drawLights(level: Level, pss: Paxel[][]) {
 
-type Cone = {
-    readonly x: number;
-    readonly y: number;
-    readonly z: number;
-    readonly cosTheta: number;
-}
-type Light = {
-    readonly color: Rgb;
-    readonly x: number;
-    readonly y: number;
-    readonly z: number;
-    readonly direction: Cone | null;
-}
+    for (let y = 0; y < level.height; y++) {
+        for (let x = 0; x < level.width; x++) {
 
+            const lighten = (color: number) => {
+                const ambientIntensity = 1.5;
 
+                const rgb = hexToRgb(color);
+                const diffuseReflectionRatio = {
+                    r: Math.max(1,rgb.r)/255,
+                    g: Math.max(1,rgb.g)/255,
+                    b: Math.max(1,rgb.b)/255,
+                };
 
-function drawLight(_random: Random, _level: Level, _pss: Paxel[][]) {
-    // const lights: Light[] = [];
-    // for (let row = 0; row < level.height; row++) {
-    //     for (let column = 0; column < level.width; column++) {
-    //         const p = new Position(row, column);
-    //         const n = [
-    //             level.getCell(p.left().above()),
-    //             level.getCell(p.above()),
-    //             level.getCell(p.right().above()),
-    //             level.getCell(p.left()),
-    //             level.getCell(p),
-    //             level.getCell(p.right()),
-    //             level.getCell(p.left().below()),
-    //             level.getCell(p.below()),
-    //             level.getCell(p.right()),
-    //         ];
-    //
-    //         if (random.next() < 0.03 && n.filter(x => x !== Cell.Wall && x !== Cell.Void).length> 5 ) {
-    //             lights.push({
-    //                 color: hexToRgb(0x555555),
-    //                 x: p.col * tileWidth + (tileWidth/2),
-    //                 y: p.row * tileHeight + (tileHeight/2),
-    //                 z: 3 * tileWidth,
-    //                 direction: null,
-    //             });
-    //         }
-    //     }
-    // }
-    //
-    // lights.push({
-    //     x: level.playerRectangle.col * tileWidth + 4 +
-    //         (level.playerDirection === Dir.Right ? -3 : level.playerDirection === Dir.Left ? 3 : 0),
-    //     y: level.playerRectangle.row * tileHeight + 1.5 +
-    //         (level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0),
-    //     z: 1,
-    //     color: hexToRgb(0x440000),
-    //     direction: {
-    //         x: level.playerDirection === Dir.Right ? -1 : level.playerDirection === Dir.Left ? 1 : 0,
-    //         y: level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0,
-    //         z: -0.2,
-    //         cosTheta: Math.cos(Math.PI/3)
-    //     },
-    // });
-    //
-    // for (let y = 0; y < level.height; y++) {
-    //     for (let x = 0; x < level.width; x++) {
-    //
-    //         const lighten = (color: number) => {
-    //             const ambientIntensity = 1.5;
-    //
-    //             const rgb = hexToRgb(color);
-    //             const diffuseReflectionRatio = {
-    //                 r: Math.max(1,rgb.r)/255,
-    //                 g: Math.max(1,rgb.g)/255,
-    //                 b: Math.max(1,rgb.b)/255,
-    //             };
-    //
-    //             const ambientReflectionRatio = diffuseReflectionRatio;
-    //             const specularReflectionRatio = {
-    //                 r: 0.0,
-    //                 g: 0.0,
-    //                 b: 0.0
-    //             };
-    //
-    //             const specularAlpha = 1;
-    //
-    //             let i = {
-    //                 r: ambientIntensity * ambientReflectionRatio.r,
-    //                 g: ambientIntensity * ambientReflectionRatio.g,
-    //                 b: ambientIntensity * ambientReflectionRatio.b,
-    //             };
-    //
-    //             for (let light of lights) {
-    //                 if (!level.visible(x, y, light.x, light.y)) {
-    //                     continue;
-    //                 }
-    //
-    //                 const lx = light.x - (x + 0.5);
-    //                 const ly = (light.y - (y + 0.5)) * 2; //pixels are twice as tall than wide
-    //                 const lz = light.z;
-    //
-    //                 const lightSourceDistance = Math.sqrt(lx * lx + ly * ly + lz * lz);
-    //
-    //                 let cosPhi = 1;
-    //                 if (light.direction != null) {
-    //                     cosPhi = -(lx * light.direction.x + ly * light.direction.y + lz * light.direction.z) / lightSourceDistance;
-    //                     if (cosPhi < light.direction.cosTheta) {
-    //                         cosPhi = 0; // outside spotlight
-    //                     }
-    //                 }
-    //
-    //                 const diffuseLightIntensity = {
-    //                     r: light.color.r / 255 * cosPhi,
-    //                     g: light.color.g / 255 * cosPhi,
-    //                     b: light.color.b / 255 * cosPhi
-    //                 };
-    //                 const specularLightIntensiy = diffuseLightIntensity;
-    //
-    //                 const d = lz / lightSourceDistance; // <L',N'>  (N' = 0,0,1)
-    //                 const s = Math.pow(lz / lightSourceDistance, specularAlpha); // <R',V'> == <V',L'> == <-N', L'>
-    //
-    //                 const a = 0.1;
-    //                 const b = 0.001;
-    //                 const c = 0.001;
-    //
-    //                 let distanceAttenuation = 1 / (a + b * lightSourceDistance + c * lightSourceDistance * lightSourceDistance);
-    //                 i.r += diffuseReflectionRatio.r * d * diffuseLightIntensity.r * distanceAttenuation;
-    //                 i.r += specularReflectionRatio.r * s * specularLightIntensiy.r * distanceAttenuation;
-    //
-    //                 i.g += diffuseReflectionRatio.g * d * diffuseLightIntensity.g * distanceAttenuation;
-    //                 i.g += specularReflectionRatio.g * s * specularLightIntensiy.g * distanceAttenuation;
-    //
-    //                 i.b += diffuseReflectionRatio.b * d * diffuseLightIntensity.b * distanceAttenuation;
-    //                 i.b += specularReflectionRatio.b * s * specularLightIntensiy.b * distanceAttenuation;
-    //             }
-    //
-    //             return rgbToHex({
-    //                 r: i.r * 255,
-    //                 g: i.g * 255,
-    //                 b: i.b * 255,
-    //             });
-    //         };
-    //
-    //         if(level.getCell(new Position(y, x)) !== Cell.Void){
-    //             let p = pss[y][x];
-    //
-    //
-    //
-    //             pss[y][x] = {...p, fg: lighten(p.fg), bg: lighten(p.bg)}
-    //         }
-    //     }
-    // }
-    //
-    // for(let light of lights) {
-    //     print(pss, 'x', Math.floor(light.y), Math.floor(light.x), 0x0000ff);
-    // }
-}
-function drawGround(random: Random, level: Level, pss: Paxel[][]) {
+                const ambientReflectionRatio = diffuseReflectionRatio;
+                const specularReflectionRatio = {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0
+                };
 
-    let ch = random.pick('▓▒░ '.split(''));
-    for (let row = 0; row < level.height; row++) {
-        let prevCell = Cell.Void;
-        let fg: number = 0;
-        let bg: number = 0;
-        for (let column = 0; column < level.width; column++) {
-            let cell = level.getCell(new Position(row, column));
-            if (column % 2 == 0 || prevCell != cell) {
-                fg = fuzzyColor(random, baseFg);
-                bg = cell == Cell.Void ? 0 : fuzzyColor(random, baseBg);
-                ch = cell == Cell.Void ? ' ' : random.pick('▓▒░ '.split(''));
+                const specularAlpha = 1;
+
+                let i = {
+                    r: ambientIntensity * ambientReflectionRatio.r,
+                    g: ambientIntensity * ambientReflectionRatio.g,
+                    b: ambientIntensity * ambientReflectionRatio.b,
+                };
+
+                for (let light of level.lights) {
+                    if (!level.visible(x, y, light.x, light.y)) {
+                        continue;
+                    }
+
+                    const lx = light.x - (x + 0.5);
+                    const ly = (light.y - (y + 0.5)) * 2; //pixels are twice as tall than wide
+                    const lz = light.z;
+
+                    const lightSourceDistance = Math.sqrt(lx * lx + ly * ly + lz * lz);
+
+                    let cosPhi = 1;
+                    if (light.direction != null) {
+                        cosPhi = -(lx * light.direction.x + ly * light.direction.y + lz * light.direction.z) / lightSourceDistance;
+                        if (cosPhi < light.direction.cosTheta) {
+                            cosPhi = 0; // outside spotlight
+                        }
+                    }
+
+                    const diffuseLightIntensity = {
+                        r: light.color.r / 255 * cosPhi,
+                        g: light.color.g / 255 * cosPhi,
+                        b: light.color.b / 255 * cosPhi
+                    };
+                    const specularLightIntensiy = diffuseLightIntensity;
+
+                    const d = lz / lightSourceDistance; // <L',N'>  (N' = 0,0,1)
+                    const s = Math.pow(lz / lightSourceDistance, specularAlpha); // <R',V'> == <V',L'> == <-N', L'>
+
+                    const a = 0.1;
+                    const b = 0.001;
+                    const c = 0.001;
+
+                    let distanceAttenuation = 1 / (a + b * lightSourceDistance + c * lightSourceDistance * lightSourceDistance);
+                    i.r += diffuseReflectionRatio.r * d * diffuseLightIntensity.r * distanceAttenuation;
+                    i.r += specularReflectionRatio.r * s * specularLightIntensiy.r * distanceAttenuation;
+
+                    i.g += diffuseReflectionRatio.g * d * diffuseLightIntensity.g * distanceAttenuation;
+                    i.g += specularReflectionRatio.g * s * specularLightIntensiy.g * distanceAttenuation;
+
+                    i.b += diffuseReflectionRatio.b * d * diffuseLightIntensity.b * distanceAttenuation;
+                    i.b += specularReflectionRatio.b * s * specularLightIntensiy.b * distanceAttenuation;
+                }
+
+                return rgbToHex({
+                    r: i.r * 255,
+                    g: i.g * 255,
+                    b: i.b * 255,
+                });
+            };
+
+            if(level.getCell(new Position(y, x)) !== Cell.Void){
+                let p = pss[y][x];
+                pss[y][x] = {...p, fg: lighten(p.fg), bg: lighten(p.bg)}
             }
-            prevCell = cell;
-            pss[row][column] = paxel(ch, fg, bg);
         }
     }
+
+    for(let light of level.lights) {
+        print(pss, 'x', Math.floor(light.y), Math.floor(light.x), 0x0000ff);
+    }
 }
+
 
 function drawTrack(_random: Random, _level: Level, _pss: Paxel[][]) {
     //
@@ -306,29 +244,26 @@ function* fizzleFade(width: number, height: number): Iterable<[number, number]> 
 export function draw(level: Level, showLogo: boolean) {
     const random = new Random(0);
     const pss = init(level);
-    drawGround(random, level, pss);
-    // drawTrack(random, level, pss);
+    drawTile2(pss, level.ground,0,0);
+    //drawTrack(random, level, pss);
     drawGoals(random, level, pss);
-    drawWallsShadows(random, level, pss);
+    drawWallsBase(random, level, pss);
     drawCrates(random, level, pss);
     drawPlayer(random, level, pss);
     drawWalls(random, level, pss);
-    // if (showLogo) {
-    //     drawTile(random, level, pss, 2, 2, logo, 0, 0, 0xffffff, null);
-    // }
-    drawLight(random, level, pss);
+    if (showLogo) {
+        drawTile(random, level, pss, 2, 2, logo, 0, 0, 0xffffff, null);
+    }
+    drawLights(level, pss);
+    const fmt = (num: number) => num.toString(10).padStart(4, '0');
+    print(pss, `${level.title}    Steps: ${fmt(level.steps)}    Pushes: ${fmt(level.pushes)}    Time: ${fmt(level.time)}`, 0, 0, 0xffffff);
 
-    if(showLogo !== showLogoPrev){
+    if (showLogo !== showLogoPrev) {
         pssPrev = null;
     }
     if (levelPrev?.title != level?.title) {
         pssPrev = null;
     }
-
-
-    const fmt = (num: number) => num.toString(10).padStart(4, '0');
-    print(pss, `${level.title}    Steps: ${fmt(level.steps)}    Pushes: ${fmt(level.pushes)}    Time: ${fmt(level.time)}`, 0,0, 0xffffff);
-
 
     const terminalWidth = process.stdout.columns;
     const terminalHeight = process.stdout.rows;
@@ -336,20 +271,25 @@ export function draw(level: Level, showLogo: boolean) {
 
     if (pssPrev == null) {
         process.stdout.write(`${goHome}${hideCursor}`);
-        for(let [icol, irow] of fizzleFade(terminalWidth, terminalHeight)){
+        let t = 100 / (terminalWidth * terminalHeight);
+        let end = Date.now() + t;
+        for (let [icol, irow] of fizzleFade(terminalWidth, terminalHeight)) {
             const p = pss[irow][icol] ?? {ch: ' ', fg: 0, bg: 0};
             let st = `\x1b[${irow + 1};${icol + 1}H`;
             st += background(p.ch, p.fg, p.bg);
             process.stdout.write(st);
-            for(let i = 0;i<50000;i++){
-                ;//spin
+            while(Date.now() < end){
+                ;
             }
+            end += t;
         }
     } else {
+
+        if (terminalWidth !== prevTerminalWidth || terminalHeight !== prevTerminalHeight){
+            pssPrev = null;
+        }
+
         let st = '';
-
-
-
         for (let irow = 0; irow < terminalHeight; irow++) {
             for (let icol = 0; icol < terminalWidth; icol++) {
                 const prev = pssPrev?.[irow]?.[icol];
@@ -366,10 +306,9 @@ export function draw(level: Level, showLogo: boolean) {
     pssPrev = pss;
     showLogoPrev = showLogo;
     levelPrev = level;
-
+    prevTerminalWidth = terminalWidth;
+    prevTerminalHeight = terminalHeight;
 }
-
-
 
 function drawShadow(random: Random, level: Level,pss: Paxel[][], tileWidth: number, tileHeight: number, irow: number, icol: number, fg: number, bg: number, drow: number=0, dcol: number=0) {
     let st = '';
@@ -384,7 +323,7 @@ function drawShadow(random: Random, level: Level,pss: Paxel[][], tileWidth: numb
 }
 
 
-function drawWallsShadows(random: Random, level: Level,pss: Paxel[][]) {
+function drawWallsBase(random: Random, level: Level,pss: Paxel[][]) {
 
     for (let wall of level.wallRectangles) {
         const {row, col} = wall;
@@ -468,10 +407,38 @@ function drawWalls(random: Random, level: Level,pss: Paxel[][]) {
     }
 }
 
+function drawTile2(
+    pss: Paxel[][],
+    tile: Tile,
+    x: number,
+    y: number
+) {
+    for (let tileRow = 0; tileRow < tile.length; tileRow++) {
+        if (pss[y + tileRow] == null) {
+            continue;
+        }
+        for (let tileCol = 0; tileCol < tile[tileRow].length; tileCol++) {
+            const pSrc = tile[tileRow][tileCol];
+            const pDst = pss[y + tileRow][x + tileCol];
+            if (pDst != null) {
+                if (pSrc.bg != null) {
+                    pDst.bg = pSrc.bg;
+                }
+                if (pSrc.fg != null) {
+                    pDst.fg = pSrc.fg;
+                }
+                if (pSrc.ch != null) {
+                    pDst.ch = pSrc.ch;
+                }
+            }
+        }
+    }
+}
 
 function drawTile(
     random: Random,
-    _level: Level,pss: Paxel[][],
+    _level: Level,
+    pss: Paxel[][],
     irow: number,
     icol: number,
     tile: string[],
@@ -545,7 +512,7 @@ function drawCrates(random: Random, level: Level,pss: Paxel[][]) {
     for(let cratePosition of level.crateRectangles){
         const bg =level.isGoal(cratePosition.center) ? baseCrateAtPositionBg : baseCrateBg;
         const fg =level.isGoal(cratePosition.center) ? baseCrateAtPositionFg : baseCrateFg;
-        drawTile(random, level,pss, cratePosition.row, cratePosition.col, crateTile, 0,0, fg, bg);
+        drawTile(random, level, pss, cratePosition.row, cratePosition.col, crateTile, 0,0, fg, bg);
     }
 }
 function print(pss:Paxel[][], st: string, irow: number, icol: number, fg: number){

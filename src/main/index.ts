@@ -8,8 +8,6 @@ const puzzleCollection = loadPuzzleCollection("resources/original_and_extra.sok"
 const saveFile = "resources/levels.sav";
 const levels = new Map<number, Level>();
 
-
-
 function getLevel(i: number): Level {
     i = (i + puzzleCollection.puzzles.length) % puzzleCollection.puzzles.length;
 
@@ -41,6 +39,9 @@ function updateLevel(cb: (level: Level) => Level){
 
 process.stdin.setRawMode(true);
 
+process.on('SIGWINCH', () => {
+    draw(currentLevel, false);
+});
 process.on('SIGTERM', () => {
     process.exit(0);
 });
