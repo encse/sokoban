@@ -11,19 +11,13 @@ export type Paxel = {
     fg: number;
 }
 
-
-export type Sprite = {
-    readonly colors: number[],
-    readonly tiles: readonly Tile[],
-}
-
 export class Screen {
     constructor(public pss: Paxel[][]) {
     }
 
     drawTile(tile: Tile, x: number, y: number){
-        for (let tileRow = 0; tileRow < tileHeight; tileRow++) {
-            for (let tileCol = 0; tileCol < tileWidth; tileCol++) {
+        for (let tileRow = 0; tileRow < tile.length; tileRow++) {
+            for (let tileCol = 0; tileCol < tile[0].length; tileCol++) {
                 this.pss[y + tileRow][x + tileCol] = {
                     ...this.pss[y + tileRow][x + tileCol],
                     ... tile[tileRow][tileCol]
@@ -251,7 +245,7 @@ export function draw(level: Level, showLogo: boolean) {
     const pss = init(level);
     const screen = new Screen(pss);
 
-    drawTile2(pss, level.ground,0,0);
+    screen.drawTile(level.ground, 0 ,0);
     //drawTrack(random, level, pss);
     for(let goal of level.goals){
         goal.draw(screen);
@@ -269,6 +263,7 @@ export function draw(level: Level, showLogo: boolean) {
     if (showLogo) {
         drawTile(random, level, pss, 2, 2, logo, 0, 0, 0xffffff, null);
     }
+
     drawLights(level, pss);
     const fmt = (num: number) => num.toString(10).padStart(4, '0');
     print(pss, `${level.title}    Steps: ${fmt(level.steps)}    Pushes: ${fmt(level.pushes)}    Time: ${fmt(level.time)}`, 0, 0, 0xffffff);
@@ -421,34 +416,6 @@ function drawWalls(random: Random, level: Level,pss: Paxel[][]) {
             }
         }
 
-    }
-}
-
-function drawTile2(
-    pss: Paxel[][],
-    tile: Tile,
-    x: number,
-    y: number
-) {
-    for (let tileRow = 0; tileRow < tile.length; tileRow++) {
-        if (pss[y + tileRow] == null) {
-            continue;
-        }
-        for (let tileCol = 0; tileCol < tile[tileRow].length; tileCol++) {
-            const pSrc = tile[tileRow][tileCol];
-            const pDst = pss[y + tileRow][x + tileCol];
-            if (pDst != null) {
-                if (pSrc.bg != null) {
-                    pDst.bg = pSrc.bg;
-                }
-                if (pSrc.fg != null) {
-                    pDst.fg = pSrc.fg;
-                }
-                if (pSrc.ch != null) {
-                    pDst.ch = pSrc.ch;
-                }
-            }
-        }
     }
 }
 

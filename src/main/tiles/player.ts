@@ -14,24 +14,24 @@ const colors = [
 
 const tiles:Tile[] = [
     tile(colors)`
-        | █▄▄▄▄█|       | 222222
-        | ▓▓░░▓▓|   11  | 003300
-        | ▓▓░░▓▓|   44  | 003300
+        | █▄▄▄▄█|       | 222222|
+        | ▓▓░░▓▓|   11  | 003300|
+        | ▓▓░░▓▓|   44  | 003300|
     `,
     tile(colors)`
-        | ▓▓▓ █▀|       | 000 22
-        | ░░░░█ | 41111 | 33332 
-        | ▓▓▓ █▄|       | 000 22
+        | ▓▓▓ █▀|       | 000 22|
+        | ░░░░█ | 41111 | 33332 |
+        | ▓▓▓ █▄|       | 000 22|
     `,
     tile(colors)`
-        | ▓▓░░▓▓|   44  | 003300
-        | ▓▓░░▓▓|   11  | 003300
-        | █▀▀▀▀█|       | 222222
+        | ▓▓░░▓▓|   44  | 003300|
+        | ▓▓░░▓▓|   11  | 003300|
+        | █▀▀▀▀█|       | 222222|
     `,
     tile(colors)`
-        | ▀█ ▓▓▓|       | 22 000
-        |  █░░░░|  11114|  23333
-        | ▄█ ▓▓▓|       | 22 000
+        | ▀█ ▓▓▓|       | 22 000|
+        |  █░░░░|  11114|  23333|
+        | ▄█ ▓▓▓|       | 22 000|
     `,
 ];
 
@@ -58,7 +58,8 @@ export class Player {
     public withDir(dir: Dir) {
         return new Player(this.center, dir);
     }
-    draw(screen: Screen) {
+
+    public draw(screen: Screen) {
         screen.drawTile(tiles[this.dir], this.rectangle.x, this.rectangle.y)
     }
 

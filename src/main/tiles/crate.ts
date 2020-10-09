@@ -1,9 +1,9 @@
-import {stripMargin, tile} from "../util/stripMargin";
+import {tile} from "../util/stripMargin";
 import {Position, Rectangle} from "../position";
 import {tileHeight, tileWidth} from "../tiles";
 import {darkenColor} from "../color";
 import {Level, Tile} from "../level";
-import {Screen, Sprite} from "../draw";
+import {Screen} from "../draw";
 
 const colors = [
     0x000000, // black
@@ -17,14 +17,14 @@ const colors = [
 
 const tiles:Tile[] = [
     tile(colors)`
-        |┌┬┬┬┬┐█|2222223|1111111
-        |│├ΘΘ├│█|2222223|1111111
-        |└┴┴┴┴┘█|2222223|1111111
+        |┌┬┬┬┬┐█|2222223|1111111|
+        |│├ΘΘ├│█|2222223|1111111|
+        |└┴┴┴┴┘█|2222223|1111111|
     `,
     tile(colors)`
-        |┌┬┬┬┬┐█|5555556|4444444
-        |│├ΘΘ├│█|5555556|4444444
-        |└┴┴┴┴┘█|5555556|4444444
+        |┌┬┬┬┬┐█|5555556|4444444|
+        |│├ΘΘ├│█|5555556|4444444|
+        |└┴┴┴┴┘█|5555556|4444444|
     `
 ];
 
