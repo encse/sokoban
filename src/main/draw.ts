@@ -1,7 +1,6 @@
 import {background, goHome, hideCursor} from "./util/ansi";
 import {hexToRgb, Rgb, rgbToHex} from "./color";
 import {Cell, Level} from "./level";
-import {baseWallBg, baseWallFg, tileHeight, tileWidth, wallTile} from "./tiles";
 import {Random} from "./util/pick";
 import {Position} from "./position";
 import {Tile} from "./util/stripMargin";
@@ -228,7 +227,6 @@ function* fizzleFade(width: number, height: number): Iterable<[number, number]> 
 
 
 export function draw(level: Level, showLogo: boolean) {
-    const random = new Random(0);
     const puzzleTile = new Tile();
 
     puzzleTile.drawTile(level.ground, 0 ,0);
@@ -243,7 +241,9 @@ export function draw(level: Level, showLogo: boolean) {
 
     level.player.draw(puzzleTile);
 
-    drawWalls(random, level, puzzleTile);
+    for (let wall of level.walls) {
+        wall.draw(puzzleTile);
+    }
 
     if (showLogo) {
         puzzleTile.drawTile(logo,
@@ -318,114 +318,6 @@ export function draw(level: Level, showLogo: boolean) {
     levelPrev = level;
     prevTerminalWidth = terminalWidth;
     prevTerminalHeight = terminalHeight;
-}
-
-function drawWalls(random: Random, level: Level, tile: Tile) {
-
-    for (let wall of level.wallRectangles) {
-        const {y, x} = wall;
-
-        let p = (y + x) % 2 == 1 ? "A" : "B";
-        let np = (y + x) % 2 == 1 ? "B" : "A";
-        const wallAboveLeft = level.isWall(wall.center.moveTile(-1, -1)) ? p : " ";
-        const wallAbove = level.isWall(wall.center.moveTile(-1, 0)) ? np : " ";
-        const wallLeft = level.isWall(wall.center.moveTile(0, -1)) ? np : " ";
-        const wallAboveRight = level.isWall(wall.center.moveTile(-1, 1)) ? p : " ";
-        const wallRight =level. isWall(wall.center.moveTile(0, 1)) ? np : " ";
-        const wallBelowLeft = level.isWall(wall.center.moveTile(1, -1)) ? p : " ";
-        const wallBelow = level.isWall(wall.center.moveTile(1, 0)) ? np : " ";
-        const wallBelowRight = level.isWall(wall.center.moveTile(1, 1)) ? p : " ";
-
-        const tiles = [
-            wallTile(wallAboveLeft, wallAbove, wallLeft, p),
-            wallTile(" ", wallAbove, " ", p),
-            wallTile(wallAbove, wallAboveRight, p, wallRight),
-            wallTile(wallLeft, p, " ", " "),
-            wallTile(" ", p, " ", " "),
-            wallTile(p, wallRight, " ", " "),
-            wallTile(wallLeft, p, wallBelowLeft, wallBelow),
-            wallTile(wallLeft, p, wallBelowLeft, wallBelow),
-            wallTile(p, wallRight, wallBelow, wallBelowRight),
-        ];
-
-        let i = 0;
-        let fg = fuzzyColor(random, baseWallFg);
-        let bg = fuzzyColor(random, baseWallBg);
-
-        for(let yT=0;yT<tileHeight;yT++){
-            for(let xT=0;xT<tileWidth;xT++){
-
-                if (i % 2 == 0) {
-                    fg = fuzzyColor(random, baseWallFg);
-                    bg = fuzzyColor(random, baseWallBg);
-                }
-                i++;
-
-                let ch: string;
-                if (yT == 0) {
-                    if (xT == 0){
-                        ch = tiles[0][tileHeight][tileWidth];
-                    } else if(xT < tileWidth - 2){
-                        ch = tiles[1][tileHeight][tileWidth + xT];
-                    } else {
-                        ch = tiles[2][tileHeight][xT];
-                    }
-                } else if(yT < tileHeight - 1)  {
-                    if (xT == 0){
-                        ch = tiles[3][yT][tileWidth];
-                    } else if(xT < tileWidth - 2){
-                        ch = tiles[4][yT][tileWidth + xT];
-                    } else {
-                        ch = tiles[5][yT][xT];
-                    }
-                } else {
-                    if (xT == 0){
-                        ch = tiles[6][tileHeight-1][tileWidth];
-                    } else if(xT < tileWidth - 2){
-                        ch = tiles[7][tileHeight-1][tileWidth + xT];
-                    } else {
-                        ch = tiles[8][tileHeight-1][xT];
-                    }
-                }
-
-                tile.set(x+xT, y+yT, paxel(ch, fg, bg));
-            }
-        }
-    }
-}
-
-function drawTile(
-    random: Random,
-    _level: Level,
-    pss: Paxel[][],
-    irow: number,
-    icol: number,
-    tile: string[],
-    dx: number = 0,
-    dy: number = 0,
-    fg: number | null,
-    bg: number | null,
-    ignoreSpace: boolean = true
-) {
-    for (let tileRow = 0; tileRow < tile.length; tileRow++) {
-        for (let tileCol = 0; tileCol < tile[tileRow].length; tileCol++) {
-            if (!ignoreSpace || tile[tileRow][tileCol] != ' ') {
-                const p = {
-                    ...pss[irow + tileRow][icol + tileCol],
-                    ch: tile[tileRow][tileCol],
-                };
-
-                if (fg != null) {
-                    p.fg = fg;
-                }
-                if (bg != null) {
-                    p.bg = fuzzyColor(random, bg);
-                }
-
-                pss[irow + tileRow + dy][icol + tileCol+ dx] = p;
-            }
-        }
-    }
 }
 
 

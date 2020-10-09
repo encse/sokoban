@@ -9,6 +9,7 @@ import {Crate} from "./tiles/crate";
 import { Player } from "./tiles/player";
 import {Goal} from "./tiles/goal";
 import {Tile} from "./util/stripMargin";
+import {Wall} from "./tiles/wall";
 
 export enum Cell {
     Wall,
@@ -37,7 +38,7 @@ type State = {
     readonly ccol: number;
     readonly crow: number;
     readonly goals: readonly Goal[];
-    readonly wallRectangles: readonly Rectangle[];
+    readonly walls: readonly Wall[];
     readonly voidRectangles: readonly Rectangle[];
     readonly crates: readonly Crate[];
     readonly player: Player;
@@ -197,7 +198,7 @@ export class Level {
     public get author() {return this.state.author;}
     public get title() {return this.state.title;}
     public get goals() {return this.state.goals;}
-    public get wallRectangles() {return this.state.wallRectangles;}
+    public get walls() {return this.state.walls;}
     public get crates() {return this.state.crates;}
     public get voidRectangles() {return this.state.voidRectangles;}
     public get player() {return this.state.player;}
@@ -226,6 +227,7 @@ export class Level {
         const board = puzzle.board.split('\n');
         const ccol= Math.max(...board.map(x => x.length));
         const crow = board.length;
+        const wallRects =  find(board, crow, ccol, '#');
         const level = new Level({
             ccol : ccol,
             crow : crow,
@@ -233,7 +235,7 @@ export class Level {
             title : puzzle.title ?? "",
             author: puzzle.author ?? "",
             player: new Player(find(board, crow, ccol, '@')[0].center, Dir.Right),
-            wallRectangles: find(board, crow, ccol, '#'),
+            walls: wallRects.map(rect => new Wall(rect.center, (pos => wallRects.some(wall => wall.contains(pos))))),
             goals: find(board, crow, ccol, '.').map(rect => new Goal(rect.center)),
             voidRectangles: findVoids(board, crow, ccol),
             completed:false,
@@ -251,7 +253,7 @@ export class Level {
         return new Level({
             ...level.state,
             lights: createLights(level, crow, ccol),
-            ground: createGround(random, level)
+            ground: createGround(random, level),
         });
     }
 
@@ -260,7 +262,7 @@ export class Level {
     }
 
     isWall(pos: Position) {
-        return this.wallRectangles.some(wall => wall.contains(pos));
+        return this.walls.some(wall => wall.rectangle.contains(pos));
     }
 
     isCrate(pos: Position) {
