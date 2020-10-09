@@ -4,18 +4,11 @@ import {darkenColor} from "./color";
 export const baseFg = 0x424242;
 export const baseBg = 0x505050;
 
-export const baseCrateFg = 0x202020;
-export const baseCrateBg = 0x654321;
-export const baseCrateAtPositionFg = 0x202020;
-export const baseCrateAtPositionBg = 0x909021;
+
 export const baseWallFg = darkenColor(0x323232, 0.5);
 export const baseWallBg = 0x323232;
 
-export const crateTile = stripMargin`
-    | ┌┬┬┬┬┐ 
-    | │├ΘΘ├│ 
-    | └┴┴┴┴┘ 
-`.split('\n');
+
 
 export const playerSprites = {
     colors: [

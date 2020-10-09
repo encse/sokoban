@@ -2,8 +2,8 @@ import {tileHeight, tileWidth} from "./tiles";
 
 export class Rectangle {
     constructor(
-        public readonly row: number,
-        public readonly col: number,
+        public readonly y: number,
+        public readonly x: number,
         public readonly height: number,
         public readonly width: number
     ) {
@@ -11,33 +11,33 @@ export class Rectangle {
 
     contains(position: Position) {
         return (
-            this.row <= position.row &&
-            position.row < this.row + this.height &&
-            this.col <= position.col &&
-            position.col < this.col + this.width
+            this.y <= position.y &&
+            position.y < this.y + this.height &&
+            this.x <= position.x &&
+            position.x < this.x + this.width
         );
     }
 
     moveTile(drow: number, dcol: number) {
-        return new Rectangle(this.row + drow * tileHeight, this.col + dcol * tileWidth, this.height, this.width);
+        return new Rectangle(this.y + drow * tileHeight, this.x + dcol * tileWidth, this.height, this.width);
     }
 
     move(drow: number, dcol: number) {
-        return new Rectangle(this.row + drow, this.col + dcol, this.height, this.width);
+        return new Rectangle(this.y + drow, this.x + dcol, this.height, this.width);
     }
 
     get center(): Position {
-        return new Position(this.row + this.height/2, this.col+this.width/2);
+        return new Position(this.y + this.height/2, this.x+this.width/2);
     }
 
     eq(playerRectangle: Rectangle) {
-        return this.row == playerRectangle.row && this.col == playerRectangle.col && this.width == playerRectangle.width && this.height == playerRectangle.height;
+        return this.y == playerRectangle.y && this.x == playerRectangle.x && this.width == playerRectangle.width && this.height == playerRectangle.height;
     }
 }
 
 export class Position {
 
-    constructor(public readonly row: number, public readonly col: number) {
+    constructor(public readonly y: number, public readonly x: number) {
     }
 
     tileLeft():Position{
@@ -57,14 +57,14 @@ export class Position {
     }
 
     eq(pos: Position){
-        return this.col === pos.col && this.row === pos.row;
+        return this.x === pos.x && this.y === pos.y;
     }
 
     moveTile(drow: number, dcol: number) {
-        return new Position(this.row + drow*tileHeight, this.col + dcol*tileWidth)
+        return new Position(this.y + drow*tileHeight, this.x + dcol*tileWidth)
     }
 
     move(drow: number, dcol: number) {
-        return new Position(this.row + drow, this.col + dcol)
+        return new Position(this.y + drow, this.x + dcol)
     }
 }

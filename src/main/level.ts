@@ -59,16 +59,16 @@ function* positions(crow: number, ccol: number): Iterable<Position> {
 
 
 function  getCh(map: string[], position: Position): string {
-    const {row, col} = position;
-    if (row >= 0 && row < map.length && col >= 0 && col < map[row].length) {
-        return map[row][col];
+    const {y, x} = position;
+    if (y >= 0 && y < map.length && x >= 0 && x < map[y].length) {
+        return map[y][x];
     }
     return ' ';
 }
 
 
 function find(map: string[], crow: number, ccol: number, ch: string): Rectangle[] {
-    return [...positions(crow, ccol)].filter(pos => getCh(map, pos) === ch).map(pos => new Rectangle(pos.row*tileHeight, pos.col*tileWidth, tileHeight, tileWidth));
+    return [...positions(crow, ccol)].filter(pos => getCh(map, pos) === ch).map(pos => new Rectangle(pos.y*tileHeight, pos.x*tileWidth, tileHeight, tileWidth));
 }
 
 function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
@@ -80,19 +80,19 @@ function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
     while (any) {
         any = false;
         for (let p of ps) {
-            const topLeft = new Position(p.row * tileHeight, p.col * tileWidth);
+            const topLeft = new Position(p.y * tileHeight, p.x * tileWidth);
             if (getCh(map, p) == ' ' && (
-                p.col == 0 ||
-                p.col == map[p.row].length - 1 ||
-                p.row == 0 ||
-                p.row == map.length - 1 ||
+                p.x == 0 ||
+                p.x == map[p.y].length - 1 ||
+                p.y == 0 ||
+                p.y == map.length - 1 ||
                 has(topLeft.moveTile(-1,0)) ||
                 has(topLeft.moveTile(1,0)) ||
                 has(topLeft.moveTile(0,-1)) ||
                 has(topLeft.moveTile(0,1))
             )) {
                 ps.delete(p);
-                voids.push(new Rectangle(topLeft.row, topLeft.col, tileHeight, tileWidth));
+                voids.push(new Rectangle(topLeft.y, topLeft.x, tileHeight, tileWidth));
                 any = true;
             }
         }
@@ -123,8 +123,8 @@ function createLights(level: Level, crow: number, ccol: number): Light[] {
             if (Math.random() < 0.05 && n.filter(x => x !== Cell.Wall && x !== Cell.Void).length > 5 ) {
                 lights.push({
                     color: hexToRgb(0x555555),
-                    x: p.col,
-                    y: p.row,
+                    x: p.x,
+                    y: p.y,
                     z: 3 * tileWidth,
                     direction: null,
                 });
@@ -178,9 +178,9 @@ function createGround(random: Random, level: Level): Tile {
 
 function playerLight(level: Level): Light {
     return {
-        x: level.playerRectangle.col + 4 +
+        x: level.playerRectangle.x + 4 +
             (level.playerDirection === Dir.Right ? -3 : level.playerDirection === Dir.Left ? 3 : 0),
-        y: level.playerRectangle.row + 1.5 +
+        y: level.playerRectangle.y + 1.5 +
             (level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0),
         z: 1,
         color: hexToRgb(0x440000),
@@ -333,7 +333,7 @@ export class Level {
 
 
         const inc = (map: ReadonlyMap<string, number>, rectangle: Rectangle): ReadonlyMap<string, number> => {
-            const key = this.getKey(rectangle.center.row, rectangle.center.col);
+            const key = this.getKey(rectangle.center.y, rectangle.center.x);
             const res = new Map<string, number>(map.entries());
             res.set(key, (map.get(key) ?? 0) + 1);
             return res;
@@ -417,10 +417,10 @@ export class Level {
     }
 
     private validPos(pos: Position): boolean {
-        const {row, col} = pos;
+        const {y, x} = pos;
         return (
-            row >= 0 && row < this.height &&
-            col >= 0 && col < this.width &&
+            y >= 0 && y < this.height &&
+            x >= 0 && x < this.width &&
             !this.voidRectangles.some(p => p.contains(pos))
         );
     }

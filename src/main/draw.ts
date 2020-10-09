@@ -1,16 +1,10 @@
 import {background, goHome, hideCursor} from "./util/ansi";
 import {darkenColor, hexToRgb, Rgb, rgbToHex} from "./color";
-import {Cell, Dir, Level, Tile} from "./level";
+import {Cell, Level, Tile} from "./level";
 import {
     baseBg,
-    baseCrateAtPositionBg,
-    baseCrateAtPositionFg,
-    baseCrateBg,
-    baseCrateFg,
-    baseFg,
     baseWallBg,
     baseWallFg,
-    crateTile,
     goalSprite,
     logo,
     playerSprites,
@@ -20,6 +14,7 @@ import {
 } from "./tiles";
 import {Random} from "./util/pick";
 import {Position} from "./position";
+import {Crate} from "./tiles/crate";
 
 export type Paxel = {
     ch: string;
@@ -27,6 +22,29 @@ export type Paxel = {
     fg: number;
 }
 
+
+export type Sprite = {
+    readonly colors: number[],
+    readonly tiles: readonly Tile[],
+}
+
+export class Screen {
+    constructor(public pss: Paxel[][]) {
+    }
+
+    drawTile(tile: Tile, x: number, y: number){
+        let irow = y;
+        let icol = x;
+        for (let tileRow = 0; tileRow < tileHeight; tileRow++) {
+            for (let tileCol = 0; tileCol < tileWidth; tileCol++) {
+                this.pss[irow + tileRow][icol + tileCol] = {
+                    ...this.pss[irow + tileRow][icol + tileCol],
+                    ... tile[tileRow][tileCol]
+                };
+            }
+        }
+    }
+}
 export function fuzzyColor(random: Random, color: number): number {
     let rand = random.next();
 
@@ -310,7 +328,9 @@ export function draw(level: Level, showLogo: boolean) {
     prevTerminalHeight = terminalHeight;
 }
 
-function drawShadow(random: Random, level: Level,pss: Paxel[][], tileWidth: number, tileHeight: number, irow: number, icol: number, fg: number, bg: number, drow: number=0, dcol: number=0) {
+function drawShadow(random: Random, level: Level,pss: Paxel[][], tileWidth: number,
+    tileHeight: number, irow: number, icol: number, fg: number, bg: number, drow: number=0, dcol: number=0
+) {
     let st = '';
     for (let tileRow = 0; tileRow < tileHeight; tileRow++) {
         for (let tileCol = 0; tileCol < tileWidth; tileCol++) {
@@ -326,18 +346,18 @@ function drawShadow(random: Random, level: Level,pss: Paxel[][], tileWidth: numb
 function drawWallsBase(random: Random, level: Level,pss: Paxel[][]) {
 
     for (let wall of level.wallRectangles) {
-        const {row, col} = wall;
-        drawShadow(random, level, pss, tileWidth, tileHeight, row, col, baseBg, darkenColor(baseWallFg, 0.9), 0,0);
+        const {y, x} = wall;
+        drawShadow(random, level, pss, tileWidth, tileHeight, y, x, baseBg, darkenColor(baseWallFg, 0.9), 0,0);
     }
 }
 
 function drawWalls(random: Random, level: Level,pss: Paxel[][]) {
 
     for (let wall of level.wallRectangles) {
-        const {row, col} = wall;
+        const {y, x} = wall;
 
-        let p = (row + col) % 2 == 1 ? "A" : "B";
-        let np = (row + col) % 2 == 1 ? "B" : "A";
+        let p = (y + x) % 2 == 1 ? "A" : "B";
+        let np = (y + x) % 2 == 1 ? "B" : "A";
         const wallAboveLeft = level.isWall(wall.center.moveTile(-1, -1)) ? p : " ";
         const wallAbove = level.isWall(wall.center.moveTile(-1, 0)) ? np : " ";
         const wallLeft = level.isWall(wall.center.moveTile(0, -1)) ? np : " ";
@@ -399,7 +419,7 @@ function drawWalls(random: Random, level: Level,pss: Paxel[][]) {
                     }
                 }
 
-                pss[row + tileRow][col+tileCol] = paxel(ch, fg, bg);
+                pss[y + tileRow][x+tileCol] = paxel(ch, fg, bg);
 
             }
         }
@@ -470,14 +490,14 @@ function drawTile(
 }
 function drawGoals(random: Random, level: Level,pss: Paxel[][]) {
     for (let goal of level.goalRectangles) {
-        drawTile(random, level, pss, goal.row, goal.col, goalSprite, 0,0,0xffffff, null);
+        drawTile(random, level, pss, goal.y, goal.x, goalSprite, 0,0,0xffffff, null);
     }
 }
 
 function drawPlayer(_random: Random, level: Level,pss: Paxel[][]) {
 
-    let irow = level.playerRectangle.row;
-    let icol = level.playerRectangle.col;
+    let irow = level.playerRectangle.y;
+    let icol = level.playerRectangle.x;
     const tile = playerSprites.tiles[level.playerDirection];
     for (let tileRow = 0; tileRow < tileHeight; tileRow++) {
         for (let tileCol = 0; tileCol < tileWidth; tileCol++) {
@@ -503,18 +523,14 @@ function drawPlayer(_random: Random, level: Level,pss: Paxel[][]) {
     }
 }
 
-function drawCrates(random: Random, level: Level,pss: Paxel[][]) {
-    for(let crate of level.crateRectangles){
-        const bg =level.isGoal(crate.center) ? baseCrateAtPositionBg : baseCrateBg;
-        drawShadow(random, level,pss, tileWidth-1, tileHeight, crate.row, crate.col, baseBg, darkenColor(bg, 0.5));
-    }
+function drawCrates(_random: Random, level: Level,pss: Paxel[][]) {
+    const screen = new Screen(pss);
 
-    for(let cratePosition of level.crateRectangles){
-        const bg =level.isGoal(cratePosition.center) ? baseCrateAtPositionBg : baseCrateBg;
-        const fg =level.isGoal(cratePosition.center) ? baseCrateAtPositionFg : baseCrateFg;
-        drawTile(random, level, pss, cratePosition.row, cratePosition.col, crateTile, 0,0, fg, bg);
+    for (let crate of level.crateRectangles) {
+        new Crate(crate.center).draw(screen, level);
     }
 }
+
 function print(pss:Paxel[][], st: string, irow: number, icol: number, fg: number){
     for(let i=0;i<st.length;i++){
         pss[irow][icol+i] = {
