@@ -2,12 +2,13 @@ import {Position, Rectangle} from "./position";
 import {Puzzle} from "./puzzle";
 import {baseBg, baseFg, tileHeight, tileWidth} from "./tiles";
 import {fail} from "./util/fail";
-import {draw, fuzzyColor, Light, paxel, Paxel} from "./draw";
+import {fuzzyColor, Light, paxel, Paxel} from "./draw";
 import {hexToRgb} from "./color";
 import {Random} from "./util/pick";
 import {Crate} from "./tiles/crate";
 import { Player } from "./tiles/player";
 import {Goal} from "./tiles/goal";
+import {Tile} from "./util/stripMargin";
 
 export enum Cell {
     Wall,
@@ -54,7 +55,7 @@ type State = {
 function* positions(crow: number, ccol: number): Iterable<Position> {
     for (let irow = 0; irow < crow; irow++) {
         for (let icol = 0; icol < ccol; icol++) {
-            yield new Position(irow, icol);
+            yield new Position(icol, irow);
         }
     }
 }
@@ -70,7 +71,7 @@ function  getCh(map: string[], position: Position): string {
 
 
 function find(map: string[], crow: number, ccol: number, ch: string): Rectangle[] {
-    return [...positions(crow, ccol)].filter(pos => getCh(map, pos) === ch).map(pos => new Rectangle(pos.y*tileHeight, pos.x*tileWidth, tileHeight, tileWidth));
+    return [...positions(crow, ccol)].filter(pos => getCh(map, pos) === ch).map(pos => new Rectangle(pos.x * tileWidth, pos.y * tileHeight, tileWidth, tileHeight));
 }
 
 function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
@@ -82,7 +83,7 @@ function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
     while (any) {
         any = false;
         for (let p of ps) {
-            const topLeft = new Position(p.y * tileHeight, p.x * tileWidth);
+            const topLeft = new Position(p.x * tileWidth, p.y * tileHeight);
             if (getCh(map, p) == ' ' && (
                 p.x == 0 ||
                 p.x == map[p.y].length - 1 ||
@@ -94,7 +95,7 @@ function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
                 has(topLeft.moveTile(0,1))
             )) {
                 ps.delete(p);
-                voids.push(new Rectangle(topLeft.y, topLeft.x, tileHeight, tileWidth));
+                voids.push(new Rectangle(topLeft.x, topLeft.y, tileWidth, tileHeight));
                 any = true;
             }
         }
@@ -109,7 +110,7 @@ function createLights(level: Level, crow: number, ccol: number): Light[] {
     const lights: Light[] = [];
     for (let row = 0; row < crow; row++) {
         for (let column = 0; column < ccol; column++) {
-            const p = new Position(row * tileHeight + tileHeight/2, column * tileWidth+tileWidth/2);
+            const p = new Position(column * tileWidth + tileWidth / 2, row * tileHeight + tileHeight / 2);
             const n = [
                 level.getCell(p.moveTile(-1, -1)),
                 level.getCell(p.moveTile(-1,  0)),
@@ -151,27 +152,23 @@ function createLights(level: Level, crow: number, ccol: number): Light[] {
     return lights;
 }
 
-export type Tile = {ch?: string, bg?: number, fg?:number}[][];
-
 function createGround(random: Random, level: Level): Tile {
     let ch = random.pick('▓▒░ '.split(''));
     let prevVoid = true;
-    const tile: Tile = [];
-    for (let row = 0; row < level.height; row++) {
+    const tile = new Tile();
+    for (let y = 0; y < level.height; y++) {
         let fg: number = 0;
         let bg: number = 0;
-        const pss: Paxel[] = [];
-        tile.push(pss);
-        for (let column = 0; column < level.width; column++) {
-            let cell = level.getCell(new Position(row, column));
+        for (let x = 0; x < level.width; x++) {
+            let cell = level.getCell(new Position(x, y));
             const isVoid = cell == Cell.Void;
-            if (column % 2 == 0 || prevVoid !== isVoid) {
+            if (x % 2 == 0 || prevVoid !== isVoid) {
                 fg = fuzzyColor(random, baseFg);
                 bg = isVoid ? 0 : fuzzyColor(random, baseBg);
                 ch = isVoid ? ' ' : random.pick('▓▒░ '.split(''));
             }
             prevVoid = isVoid;
-            pss.push(paxel(ch, fg, bg));
+            tile.set(x, y, paxel(ch, fg, bg));
         }
     }
 
@@ -241,7 +238,7 @@ export class Level {
             voidRectangles: findVoids(board, crow, ccol),
             completed:false,
             crates: find(board, crow, ccol, '$').map(pos => new Crate(pos.center)),
-            ground: [],
+            ground: new Tile(),
             lights: [],
             steps: 0,
             pushes: 0,
@@ -482,7 +479,7 @@ export class Level {
                 y1 += dy2;
             }
 
-            if (this.getCell(new Position(y1, x1)) == Cell.Wall) {
+            if (this.getCell(new Position(x1, y1)) == Cell.Wall) {
                 res = false;
                 break;
             }

@@ -1,9 +1,8 @@
-import {tile} from "../util/stripMargin";
+import {Tile, tile} from "../util/stripMargin";
 import {Position, Rectangle} from "../position";
 import {tileHeight, tileWidth} from "../tiles";
 import {darkenColor} from "../color";
-import {Level, Tile} from "../level";
-import {Screen} from "../draw";
+import {Level} from "../level";
 
 const colors = [
     0x000000, // black
@@ -34,15 +33,10 @@ export class Crate {
 
     public constructor(center: Position) {
         this.center = center;
-        this.rectangle = new Rectangle(
-            Math.floor(center.y - tileHeight / 2),
-            Math.floor(center.x - tileWidth / 2),
-            tileHeight,
-            tileWidth
-        )
+        this.rectangle = new Rectangle(Math.floor(center.x - tileWidth / 2), Math.floor(center.y - tileHeight / 2), tileWidth, tileHeight)
     }
 
-    draw(screen: Screen, level: Level) {
-        screen.drawTile(tiles[level.isGoal(this.center) ? 1 : 0], this.rectangle.x, this.rectangle.y)
+    draw(tile: Tile, level: Level) {
+        tile.drawTile(tiles[level.isGoal(this.center) ? 1 : 0], this.rectangle.x, this.rectangle.y)
     }
 }

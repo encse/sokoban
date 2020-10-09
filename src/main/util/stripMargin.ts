@@ -1,7 +1,57 @@
-import {Tile} from "../level";
-import {tileHeight, tileWidth} from "../tiles";
-import {Paxel} from "../draw";
+import {Position, Rectangle} from "../position";
 
+export class Tile {
+    private pss = new Map<string, {ch?: string, bg?: number, fg?: number}>();
+
+    private rectangle: Rectangle | null = null;
+
+    get x(): number {
+        return this.rectangle == null ? 0 : this.rectangle.x;
+    }
+    get y(): number {
+        return this.rectangle == null ? 0 : this.rectangle.y;
+    }
+
+    get width(): number {
+        return this.rectangle == null ? 0 : this.rectangle.width;
+    }
+    get height(): number {
+        return this.rectangle == null ? 0 : this.rectangle.height;
+    }
+
+    get(x: number, y: number): {ch?: string, bg?: number, fg?: number}{
+       return this.pss.get(this.key(x, y)) ?? {};
+    }
+
+    getOrDefault(x: number, y: number): {ch: string, bg: number, fg: number}{
+        return {...{ch: ' ', bg: 0, fg: 0}, ...this.get(x, y)};
+    }
+
+    set(x: number, y: number, paxel: {ch?: string, bg?: number, fg?: number}) {
+        this.pss.set(this.key(x, y), {...this.get(x, y),... paxel});
+        if (this.rectangle == null) {
+            this.rectangle = new Rectangle(x, y, 1, 1);
+        } else if (!this.rectangle.contains(new Position(x, y))) {
+            const left = Math.min(x, this.rectangle.x);
+            const top = Math.min(y, this.rectangle.y);
+            const right = Math.max(x, this.rectangle.x + this.rectangle.width - 1);
+            const bottom = Math.max(y, this.rectangle.y+ this.rectangle.height - 1);
+            this.rectangle = new Rectangle(left, top, right - left + 1, bottom - top + 1);
+        }
+    }
+
+    key(x: number, y: number) {
+        return `${x},${y}`;
+    }
+
+    drawTile(tile: Tile, x: number, y: number) {
+        for (let yT = 0; yT < tile.height; yT++) {
+            for (let xT = 0; xT < tile.width; xT++) {
+                this.set(x + xT, y + yT, tile.get(tile.x + xT, tile.y + yT));
+            }
+        }
+    }
+}
 export function stripMargin(strings: TemplateStringsArray, ...values: any[]): string {
     let s = strings[0];
     for (let i = 0; i < values.length; i++) {
@@ -16,31 +66,63 @@ export function stripMargin(strings: TemplateStringsArray, ...values: any[]): st
     );
 }
 
+
+function getLines(strings: TemplateStringsArray, values: any[]) {
+    let s = strings[0];
+    for (let i = 0; i < values.length; i++) {
+        s += values[i];
+        s += strings[i + 1];
+    }
+    const lines = (s
+            .split("\n")
+            .filter(line => line.match(/^\s*\|/))
+            .map(line => line.replace(/^\s*\|/, ""))
+            .join('\n')
+    ).split('\n');
+
+    const columns: string[][] = [];
+    for(let line of lines){
+        columns.push(line.split('|'));
+    }
+    return columns;
+}
+
+export function solidTile(fg: number) {
+    return (strings: TemplateStringsArray, ...values: any[]) => {
+
+        const lines = getLines(strings, values);
+        const tile = new Tile();
+
+        for (let y = 0; y < lines.length; y++) {
+            for (let x = 0; x < lines[y][0].length; x++) {
+                const ch = lines[y][0][x];
+                const p: { ch?: string, fg?: number, bg?: number } = {};
+                if (ch !== ' ') {
+                    p.ch = ch;
+                    p.fg = fg;
+                }
+                tile.set(x, y, p);
+            }
+        }
+
+        return tile;
+    }
+}
+
 export function tile(colors: number[]) {
     return (strings: TemplateStringsArray, ...values: any[]) => {
-        let s = strings[0];
-        for (let i = 0; i < values.length; i++) {
-            s += values[i];
-            s += strings[i + 1];
-        }
-        const lines = (s
-                .split("\n")
-                .filter(line => line.match(/^\s*\|/))
-                .map(line => line.replace(/^\s*\|/, ""))
-                .join('\n')
-        ).split('\n');
+        const lines = getLines(strings, values);
 
-        const res = [];
+        const tile = new Tile();
+        const tileHeight = lines.length;
+        const tileWidth = lines[0][0].length;
+        for (let y = 0; y < tileHeight; y++) {
 
-        for (let tileRow = 0; tileRow < tileHeight; tileRow++) {
-            const line: { ch?: string, fg?: number, bg?: number }[] = [];
-            res.push(line);
+            for (let x = 0; x < tileWidth; x++) {
 
-            for (let tileCol = 0; tileCol < tileWidth; tileCol++) {
-
-                const ch = lines[tileRow][tileCol];
-                const bg = lines[tileRow][tileCol + tileWidth + 1];
-                const fg = lines[tileRow][tileCol + 2 * tileWidth + 2];
+                const ch = lines[y][0][x];
+                const bg = lines[y][1][x];
+                const fg = lines[y][2][x];
 
                 const p: { ch?: string, fg?: number, bg?: number } = {};
                 if (ch != ' ') {
@@ -53,11 +135,11 @@ export function tile(colors: number[]) {
                     p.bg = colors[bg.charCodeAt(0) - '0'.charCodeAt(0)];
                 }
 
-                line.push(p);
+                tile.set(x, y, p);
             }
         }
 
-        return res;
+        return tile;
     }
 
 }

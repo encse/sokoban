@@ -2,10 +2,10 @@ import {tileHeight, tileWidth} from "./tiles";
 
 export class Rectangle {
     constructor(
-        public readonly y: number,
         public readonly x: number,
-        public readonly height: number,
-        public readonly width: number
+        public readonly y: number,
+        public readonly width: number,
+        public readonly height: number
     ) {
     }
 
@@ -19,15 +19,15 @@ export class Rectangle {
     }
 
     moveTile(drow: number, dcol: number) {
-        return new Rectangle(this.y + drow * tileHeight, this.x + dcol * tileWidth, this.height, this.width);
+        return new Rectangle(this.x + dcol * tileWidth, this.y + drow * tileHeight, this.width, this.height);
     }
 
     move(drow: number, dcol: number) {
-        return new Rectangle(this.y + drow, this.x + dcol, this.height, this.width);
+        return new Rectangle(this.x + dcol, this.y + drow, this.width, this.height);
     }
 
     get center(): Position {
-        return new Position(this.y + this.height/2, this.x+this.width/2);
+        return new Position(this.x + this.width / 2, this.y + this.height / 2);
     }
 
     eq(playerRectangle: Rectangle) {
@@ -37,7 +37,7 @@ export class Rectangle {
 
 export class Position {
 
-    constructor(public readonly y: number, public readonly x: number) {
+    constructor(public readonly x: number, public readonly y: number) {
     }
 
     tileLeft():Position{
@@ -61,10 +61,10 @@ export class Position {
     }
 
     moveTile(drow: number, dcol: number) {
-        return new Position(this.y + drow*tileHeight, this.x + dcol*tileWidth)
+        return new Position(this.x + dcol * tileWidth, this.y + drow * tileHeight)
     }
 
     move(drow: number, dcol: number) {
-        return new Position(this.y + drow, this.x + dcol)
+        return new Position(this.x + dcol, this.y + drow)
     }
 }

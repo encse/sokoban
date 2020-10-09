@@ -1,10 +1,9 @@
-import {tile} from "../util/stripMargin";
+import {Tile, tile} from "../util/stripMargin";
 import {Position, Rectangle} from "../position";
 import {tileHeight, tileWidth} from "../tiles";
-import {Screen} from "../draw";
 
 const colors = [
-    0x008800
+    0x0000ff
 ]
 
 const goalTile = tile(colors)`
@@ -19,15 +18,10 @@ export class Goal {
 
     public constructor(center: Position) {
         this.center = center;
-        this.rectangle = new Rectangle(
-            Math.floor(center.y - tileHeight / 2),
-            Math.floor(center.x - tileWidth / 2),
-            tileHeight,
-            tileWidth
-        )
+        this.rectangle = new Rectangle(Math.floor(center.x - tileWidth / 2), Math.floor(center.y - tileHeight / 2), tileWidth, tileHeight)
     }
 
-    draw(screen: Screen) {
-        screen.drawTile(goalTile, this.rectangle.x, this.rectangle.y)
+    draw(tile: Tile) {
+        tile.drawTile(goalTile, this.rectangle.x, this.rectangle.y)
     }
 }

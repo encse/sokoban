@@ -1,9 +1,11 @@
 import {background, goHome, hideCursor} from "./util/ansi";
 import {hexToRgb, Rgb, rgbToHex} from "./color";
-import {Cell, Level, Tile} from "./level";
-import {baseWallBg, baseWallFg, logo, tileHeight, tileWidth, wallTile} from "./tiles";
+import {Cell, Level} from "./level";
+import {baseWallBg, baseWallFg, tileHeight, tileWidth, wallTile} from "./tiles";
 import {Random} from "./util/pick";
 import {Position} from "./position";
+import {Tile} from "./util/stripMargin";
+import {logo} from "./tiles/logo";
 
 export type Paxel = {
     ch: string;
@@ -11,21 +13,6 @@ export type Paxel = {
     fg: number;
 }
 
-export class Screen {
-    constructor(public pss: Paxel[][]) {
-    }
-
-    drawTile(tile: Tile, x: number, y: number){
-        for (let tileRow = 0; tileRow < tile.length; tileRow++) {
-            for (let tileCol = 0; tileCol < tile[0].length; tileCol++) {
-                this.pss[y + tileRow][x + tileCol] = {
-                    ...this.pss[y + tileRow][x + tileCol],
-                    ... tile[tileRow][tileCol]
-                };
-            }
-        }
-    }
-}
 export function fuzzyColor(random: Random, color: number): number {
     let rand = random.next();
 
@@ -52,7 +39,7 @@ export function paxel(ch: string, fg: number, bg: number): Paxel{
     };
 }
 
-let pssPrev: Paxel[][] | null = null;
+let prevTerminalTile: Tile | null = null;
 let levelPrev: Level | null = null;
 let showLogoPrev: boolean | null = null;
 let prevTerminalHeight: number | null = null;
@@ -90,7 +77,7 @@ function init(level: Level): Paxel[][]{
     return pss;
 }
 
-function drawLights(level: Level, pss: Paxel[][]) {
+function drawLights(level: Level, tile: Tile) {
 
     for (let y = 0; y < level.height; y++) {
         for (let x = 0; x < level.width; x++) {
@@ -171,15 +158,15 @@ function drawLights(level: Level, pss: Paxel[][]) {
                 });
             };
 
-            if(level.getCell(new Position(y, x)) !== Cell.Void){
-                let p = pss[y][x];
-                pss[y][x] = {...p, fg: lighten(p.fg), bg: lighten(p.bg)}
+            if(level.getCell(new Position(x, y)) !== Cell.Void){
+                let p = tile.getOrDefault(x, y);
+                tile.set(x, y, {...p, fg: lighten(p.fg), bg: lighten(p.bg)});
             }
         }
     }
 
     for(let light of level.lights) {
-        print(pss, 'x', Math.floor(light.y), Math.floor(light.x), 0x0000ff);
+        print(tile, 'x', Math.floor(light.y), Math.floor(light.x), 0x0000ff);
     }
 }
 
@@ -242,48 +229,62 @@ function* fizzleFade(width: number, height: number): Iterable<[number, number]> 
 
 export function draw(level: Level, showLogo: boolean) {
     const random = new Random(0);
-    const pss = init(level);
-    const screen = new Screen(pss);
+    const puzzleTile = new Tile();
 
-    screen.drawTile(level.ground, 0 ,0);
+    puzzleTile.drawTile(level.ground, 0 ,0);
     //drawTrack(random, level, pss);
     for(let goal of level.goals){
-        goal.draw(screen);
+        goal.draw(puzzleTile);
     }
 
     for (let crate of level.crates) {
-        crate.draw(screen, level);
+        crate.draw(puzzleTile, level);
     }
 
-    level.player.draw(screen);
+    level.player.draw(puzzleTile);
 
-    drawWalls(random, level, pss);
+    drawWalls(random, level, puzzleTile);
 
     if (showLogo) {
-        drawTile(random, level, pss, 2, 2, logo, 0, 0, 0xffffff, null);
+        puzzleTile.drawTile(logo,
+            Math.floor((puzzleTile.width - logo.width) / 2),
+            Math.floor((puzzleTile.height - logo.height) / 2)
+        );
     }
 
-    drawLights(level, pss);
+    drawLights(level, puzzleTile);
+
+
+
     const fmt = (num: number) => num.toString(10).padStart(4, '0');
-    print(pss, `${level.title}    Steps: ${fmt(level.steps)}    Pushes: ${fmt(level.pushes)}    Time: ${fmt(level.time)}`, 0, 0, 0xffffff);
+    print(puzzleTile,
+        `${level.title}    Steps: ${fmt(level.steps)}    Pushes: ${fmt(level.pushes)}    Time: ${fmt(level.time)}`,
+        -2, -2, 0xffffff);
 
     if (showLogo !== showLogoPrev) {
-        pssPrev = null;
+        prevTerminalTile = null;
     }
     if (levelPrev?.title != level?.title) {
-        pssPrev = null;
+        prevTerminalTile = null;
     }
 
     const terminalWidth = process.stdout.columns;
     const terminalHeight = process.stdout.rows;
 
+    const terminalTile = new Tile();
+    terminalTile.drawTile(puzzleTile,
+        Math.floor((terminalWidth - puzzleTile.width) / 2),
+        Math.floor((terminalHeight - puzzleTile.height) / 2),
+    );
 
-    if (pssPrev == null) {
+
+
+    if (prevTerminalTile == null) {
         process.stdout.write(`${goHome}${hideCursor}`);
         let t = 100 / (terminalWidth * terminalHeight);
         let end = Date.now() + t;
         for (let [icol, irow] of fizzleFade(terminalWidth, terminalHeight)) {
-            const p = pss[irow][icol] ?? {ch: ' ', fg: 0, bg: 0};
+            const p = {ch: ' ', fg: 0, bg: 0, ... terminalTile.get(icol, irow)};
             let st = `\x1b[${irow + 1};${icol + 1}H`;
             st += background(p.ch, p.fg, p.bg);
             process.stdout.write(st);
@@ -295,14 +296,14 @@ export function draw(level: Level, showLogo: boolean) {
     } else {
 
         if (terminalWidth !== prevTerminalWidth || terminalHeight !== prevTerminalHeight){
-            pssPrev = null;
+            prevTerminalTile = null;
         }
 
         let st = '';
         for (let irow = 0; irow < terminalHeight; irow++) {
             for (let icol = 0; icol < terminalWidth; icol++) {
-                const prev = pssPrev?.[irow]?.[icol];
-                const p = pss[irow][icol] ?? {ch: ' ', fg: 0, bg: 0};
+                const prev = prevTerminalTile?.get(icol, irow);
+                const p = {ch: ' ', fg: 0, bg: 0, ... terminalTile.get(icol, irow)};
                 if (p.ch != prev?.ch || p.fg != prev?.fg || p.bg != prev?.bg) {
                     st += `\x1b[${irow + 1};${icol + 1}H`;
                     st += background(p.ch, p.fg, p.bg);
@@ -312,14 +313,14 @@ export function draw(level: Level, showLogo: boolean) {
         process.stdout.write(st);
     }
 
-    pssPrev = pss;
+    prevTerminalTile = puzzleTile;
     showLogoPrev = showLogo;
     levelPrev = level;
     prevTerminalWidth = terminalWidth;
     prevTerminalHeight = terminalHeight;
 }
 
-function drawWalls(random: Random, level: Level,pss: Paxel[][]) {
+function drawWalls(random: Random, level: Level, tile: Tile) {
 
     for (let wall of level.wallRectangles) {
         const {y, x} = wall;
@@ -351,8 +352,8 @@ function drawWalls(random: Random, level: Level,pss: Paxel[][]) {
         let fg = fuzzyColor(random, baseWallFg);
         let bg = fuzzyColor(random, baseWallBg);
 
-        for(let tileRow=0;tileRow<tileHeight;tileRow++){
-            for(let tileCol=0;tileCol<tileWidth;tileCol++){
+        for(let yT=0;yT<tileHeight;yT++){
+            for(let xT=0;xT<tileWidth;xT++){
 
                 if (i % 2 == 0) {
                     fg = fuzzyColor(random, baseWallFg);
@@ -361,37 +362,35 @@ function drawWalls(random: Random, level: Level,pss: Paxel[][]) {
                 i++;
 
                 let ch: string;
-                if (tileRow == 0) {
-                    if (tileCol == 0){
+                if (yT == 0) {
+                    if (xT == 0){
                         ch = tiles[0][tileHeight][tileWidth];
-                    } else if(tileCol < tileWidth - 2){
-                        ch = tiles[1][tileHeight][tileWidth + tileCol];
+                    } else if(xT < tileWidth - 2){
+                        ch = tiles[1][tileHeight][tileWidth + xT];
                     } else {
-                        ch = tiles[2][tileHeight][tileCol];
+                        ch = tiles[2][tileHeight][xT];
                     }
-                } else if(tileRow < tileHeight - 1)  {
-                    if (tileCol == 0){
-                        ch = tiles[3][tileRow][tileWidth];
-                    } else if(tileCol < tileWidth - 2){
-                        ch = tiles[4][tileRow][tileWidth + tileCol];
+                } else if(yT < tileHeight - 1)  {
+                    if (xT == 0){
+                        ch = tiles[3][yT][tileWidth];
+                    } else if(xT < tileWidth - 2){
+                        ch = tiles[4][yT][tileWidth + xT];
                     } else {
-                        ch = tiles[5][tileRow][tileCol];
+                        ch = tiles[5][yT][xT];
                     }
                 } else {
-                    if (tileCol == 0){
+                    if (xT == 0){
                         ch = tiles[6][tileHeight-1][tileWidth];
-                    } else if(tileCol < tileWidth - 2){
-                        ch = tiles[7][tileHeight-1][tileWidth + tileCol];
+                    } else if(xT < tileWidth - 2){
+                        ch = tiles[7][tileHeight-1][tileWidth + xT];
                     } else {
-                        ch = tiles[8][tileHeight-1][tileCol];
+                        ch = tiles[8][tileHeight-1][xT];
                     }
                 }
 
-                pss[y + tileRow][x+tileCol] = paxel(ch, fg, bg);
-
+                tile.set(x+xT, y+yT, paxel(ch, fg, bg));
             }
         }
-
     }
 }
 
@@ -430,12 +429,8 @@ function drawTile(
 }
 
 
-function print(pss:Paxel[][], st: string, irow: number, icol: number, fg: number){
-    for(let i=0;i<st.length;i++){
-        pss[irow][icol+i] = {
-            ...pss[irow][icol+i],
-            ch: st[i],
-            fg: fg
-        }
+function print(tile: Tile, st: string, irow: number, icol: number, fg: number) {
+    for (let i = 0; i < st.length; i++) {
+        tile.set(icol + i, irow, {ch: st[i], fg: fg});
     }
 }
