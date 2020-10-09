@@ -26,7 +26,7 @@ function updateLevel(cb: (level: Level) => Level){
     const newLevel = cb(currentLevel);
     if (newLevel.title !== previousLevel.title) {
         previousLevel = newLevel;
-    } else if (!newLevel.playerRectangle.eq(currentLevel.playerRectangle)) {
+    } else if (!newLevel.player.center.eq(currentLevel.player.center)) {
         previousLevel = currentLevel;
         const fd = fs.openSync(saveFile, 'w');
         fs.writeSync(fd, [...levels.values()].map(level => level.serialize()).join('\n'));

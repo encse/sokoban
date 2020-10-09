@@ -10,44 +10,7 @@ export const baseWallBg = 0x323232;
 
 
 
-export const playerSprites = {
-    colors: [
-        0x000000, // black
-        0xA9A9A9, // dark gray
-        0x808080, // gray
-        0x939EDA, //
-        0x880000, // red
-    ],
-    tiles: [
-        stripMargin`
-        |  █▄▄▄▄█        222222 
-        |  ▓▓░░▓▓   11   003300 
-        |  ▓▓░░▓▓   44   003300 
-        `.split('\n'),
-        stripMargin`
-        |  ▓▓▓ █▀        000 22
-        |  ░░░░█  41111  33332 
-        |  ▓▓▓ █▄        000 22
-        `.split('\n'),
-        stripMargin`
-        |  ▓▓░░▓▓   44   003300 
-        |  ▓▓░░▓▓   11   003300 
-        |  █▀▀▀▀█        222222 
-        `.split('\n'),
-        stripMargin`
-        |  ▀█ ▓▓▓        22 000
-        |   █░░░░  11114  23333
-        |  ▄█ ▓▓▓        22 000
-        `.split('\n'),
-    ]
 
-};
-
-export const goalSprite = stripMargin`
-    |       
-    |    /\\
-    |    \\/
-`.split('\n');
 
 export const tileHeight = 3;
 export const tileWidth = 7;

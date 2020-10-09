@@ -1,20 +1,9 @@
 import {background, goHome, hideCursor} from "./util/ansi";
 import {darkenColor, hexToRgb, Rgb, rgbToHex} from "./color";
 import {Cell, Level, Tile} from "./level";
-import {
-    baseBg,
-    baseWallBg,
-    baseWallFg,
-    goalSprite,
-    logo,
-    playerSprites,
-    tileHeight,
-    tileWidth,
-    wallTile
-} from "./tiles";
+import {baseBg, baseWallBg, baseWallFg, logo, tileHeight, tileWidth, wallTile} from "./tiles";
 import {Random} from "./util/pick";
 import {Position} from "./position";
-import {Crate} from "./tiles/crate";
 
 export type Paxel = {
     ch: string;
@@ -33,12 +22,10 @@ export class Screen {
     }
 
     drawTile(tile: Tile, x: number, y: number){
-        let irow = y;
-        let icol = x;
         for (let tileRow = 0; tileRow < tileHeight; tileRow++) {
             for (let tileCol = 0; tileCol < tileWidth; tileCol++) {
-                this.pss[irow + tileRow][icol + tileCol] = {
-                    ...this.pss[irow + tileRow][icol + tileCol],
+                this.pss[y + tileRow][x + tileCol] = {
+                    ...this.pss[y + tileRow][x + tileCol],
                     ... tile[tileRow][tileCol]
                 };
             }
@@ -262,13 +249,23 @@ function* fizzleFade(width: number, height: number): Iterable<[number, number]> 
 export function draw(level: Level, showLogo: boolean) {
     const random = new Random(0);
     const pss = init(level);
+    const screen = new Screen(pss);
+
     drawTile2(pss, level.ground,0,0);
     //drawTrack(random, level, pss);
-    drawGoals(random, level, pss);
+    for(let goal of level.goals){
+        goal.draw(screen);
+    }
     drawWallsBase(random, level, pss);
-    drawCrates(random, level, pss);
-    drawPlayer(random, level, pss);
+
+    for (let crate of level.crates) {
+        crate.draw(screen, level);
+    }
+
+    level.player.draw(screen);
+
     drawWalls(random, level, pss);
+
     if (showLogo) {
         drawTile(random, level, pss, 2, 2, logo, 0, 0, 0xffffff, null);
     }
@@ -488,48 +485,7 @@ function drawTile(
         }
     }
 }
-function drawGoals(random: Random, level: Level,pss: Paxel[][]) {
-    for (let goal of level.goalRectangles) {
-        drawTile(random, level, pss, goal.y, goal.x, goalSprite, 0,0,0xffffff, null);
-    }
-}
 
-function drawPlayer(_random: Random, level: Level,pss: Paxel[][]) {
-
-    let irow = level.playerRectangle.y;
-    let icol = level.playerRectangle.x;
-    const tile = playerSprites.tiles[level.playerDirection];
-    for (let tileRow = 0; tileRow < tileHeight; tileRow++) {
-        for (let tileCol = 0; tileCol < tileWidth; tileCol++) {
-
-            const ch = tile[tileRow][tileCol];
-            const bg = tile[tileRow][tileCol + tileWidth];
-            const fg = tile[tileRow][tileCol + 2 * tileWidth];
-
-            let p = {
-                ...pss[irow + tileRow][icol + tileCol],
-            };
-            if (ch != ' ') {
-                p = {...p, ch};
-            }
-            if (bg != ' ') {
-                p = {...p, bg: playerSprites.colors[bg.charCodeAt(0) - '0'.charCodeAt(0)]};
-            }
-            if (fg != ' ') {
-                p = {...p, fg: playerSprites.colors[fg.charCodeAt(0) - '0'.charCodeAt(0)]};
-            }
-            pss[irow + tileRow][icol + tileCol] = p;
-        }
-    }
-}
-
-function drawCrates(_random: Random, level: Level,pss: Paxel[][]) {
-    const screen = new Screen(pss);
-
-    for (let crate of level.crateRectangles) {
-        new Crate(crate.center).draw(screen, level);
-    }
-}
 
 function print(pss:Paxel[][], st: string, irow: number, icol: number, fg: number){
     for(let i=0;i<st.length;i++){

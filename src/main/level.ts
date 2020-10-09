@@ -5,6 +5,9 @@ import {fail} from "./util/fail";
 import {draw, fuzzyColor, Light, paxel, Paxel} from "./draw";
 import {hexToRgb} from "./color";
 import {Random} from "./util/pick";
+import {Crate} from "./tiles/crate";
+import { Player } from "./tiles/player";
+import {Goal} from "./tiles/goal";
 
 export enum Cell {
     Wall,
@@ -32,12 +35,11 @@ type State = {
     readonly board: string;
     readonly ccol: number;
     readonly crow: number;
-    readonly goalRectangles: readonly Rectangle[];
+    readonly goals: readonly Goal[];
     readonly wallRectangles: readonly Rectangle[];
     readonly voidRectangles: readonly Rectangle[];
-    readonly crateRectangles: readonly Rectangle[];
-    readonly playerRectangle: Rectangle;
-    readonly playerDirection: Dir;
+    readonly crates: readonly Crate[];
+    readonly player: Player;
     readonly lights: readonly Light[];
     readonly completed: boolean;
     readonly ground: Tile;
@@ -178,15 +180,15 @@ function createGround(random: Random, level: Level): Tile {
 
 function playerLight(level: Level): Light {
     return {
-        x: level.playerRectangle.x + 4 +
-            (level.playerDirection === Dir.Right ? -3 : level.playerDirection === Dir.Left ? 3 : 0),
-        y: level.playerRectangle.y + 1.5 +
-            (level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0),
+        x: level.player.rectangle.x + 4 +
+            (level.player.dir === Dir.Right ? -3 : level.player.dir === Dir.Left ? 3 : 0),
+        y: level.player.rectangle.y + 1.5 +
+            (level.player.dir === Dir.Down ? -1 : level.player.dir === Dir.Up ? 1 : 0),
         z: 1,
         color: hexToRgb(0x440000),
         direction: {
-            x: level.playerDirection === Dir.Right ? -1 : level.playerDirection === Dir.Left ? 1 : 0,
-            y: level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0,
+            x: level.player.dir === Dir.Right ? -1 : level.player.dir === Dir.Left ? 1 : 0,
+            y: level.player.dir === Dir.Down ? -1 : level.player.dir === Dir.Up ? 1 : 0,
             z: -0.2,
             cosTheta: Math.cos(Math.PI / 3)
         },
@@ -197,12 +199,11 @@ export class Level {
 
     public get author() {return this.state.author;}
     public get title() {return this.state.title;}
-    public get goalRectangles() {return this.state.goalRectangles;}
+    public get goals() {return this.state.goals;}
     public get wallRectangles() {return this.state.wallRectangles;}
-    public get crateRectangles() {return this.state.crateRectangles;}
+    public get crates() {return this.state.crates;}
     public get voidRectangles() {return this.state.voidRectangles;}
-    public get playerRectangle() {return this.state.playerRectangle;}
-    public get playerDirection() {return this.state.playerDirection;}
+    public get player() {return this.state.player;}
     public get lights() {
         return [...this.state.lights, playerLight(this)];
     };
@@ -234,13 +235,12 @@ export class Level {
             board : puzzle.board,
             title : puzzle.title ?? "",
             author: puzzle.author ?? "",
-            playerRectangle: find(board, crow, ccol, '@')[0],
+            player: new Player(find(board, crow, ccol, '@')[0].center, Dir.Right),
             wallRectangles: find(board, crow, ccol, '#'),
-            goalRectangles: find(board, crow, ccol, '.'),
+            goals: find(board, crow, ccol, '.').map(rect => new Goal(rect.center)),
             voidRectangles: findVoids(board, crow, ccol),
             completed:false,
-            crateRectangles: find(board, crow, ccol, '$'),
-            playerDirection: Dir.Right,
+            crates: find(board, crow, ccol, '$').map(pos => new Crate(pos.center)),
             ground: [],
             lights: [],
             steps: 0,
@@ -259,7 +259,7 @@ export class Level {
     }
 
     isGoal(pos: Position) {
-        return this.goalRectangles.some(goal => goal.contains(pos));
+        return this.goals.some(goal => goal.rectangle.contains(pos));
     }
 
     isWall(pos: Position) {
@@ -267,14 +267,14 @@ export class Level {
     }
 
     isCrate(pos: Position) {
-        return this.crateRectangles.some(crates => crates.contains(pos));
+        return this.crates.some(crate => crate.rectangle.contains(pos));
     }
 
     public getCell(pos: Position): Cell {
 
         if (!this.validPos(pos)) {
             return Cell.Void;
-        } else if (this.playerRectangle.contains(pos)) {
+        } else if (this.player.rectangle.contains(pos)) {
             return Cell.Player;
         } else if (this.isWall(pos)) {
             return Cell.Wall;
@@ -290,7 +290,18 @@ export class Level {
     moveTile(drow: number, dcol: number) {
         let oldState = this.state;
         let newState: State = oldState;
-        const newPlayerRectangle = this.playerRectangle.moveTile(drow, dcol);
+        const newPlayerRect = this.player.rectangle.moveTile(drow, dcol)
+
+        newState = {
+            ...newState,
+            player: newState.player.withDir(
+                drow == 1 && dcol == 0 ? Dir.Down :
+                drow == -1 && dcol == 0 ? Dir.Up :
+                drow == 0 && dcol == -1 ? Dir.Left :
+                drow == 0 && dcol == 1 ? Dir.Right :
+                this.player.dir
+            )
+        }
 
         let step =
             drow == 0 && dcol == 1 ? 'r' :
@@ -299,23 +310,23 @@ export class Level {
             drow == -1 && dcol == 0 ? 'u' :
             fail();
 
-        switch (this.getCell(newPlayerRectangle.center)) {
+        switch (this.getCell(newPlayerRect.center)) {
             case Cell.Wall:
             case Cell.Player:
                 break;
             case Cell.Crate:
-                const newCratePosition = this.playerRectangle.moveTile(2 * drow, 2 * dcol);
+                const newCratePosition = this.player.rectangle.moveTile(2 * drow, 2 * dcol);
                 if (!this.completed && !this.isWall(newCratePosition.center) && !this.isCrate(newCratePosition.center)) {
-                    const icrate = this.crateRectangles.findIndex(crate => crate.contains(newPlayerRectangle.center));
-                    const newCratePositions = this.crateRectangles.map((cratePosition, i) => i == icrate ? newCratePosition : cratePosition);
-                    const newCompleted = newCratePositions.every(cratePosition => this.isGoal(cratePosition.center));
+                    const icrate = this.crates.findIndex(crate => crate.rectangle.contains(newPlayerRect.center));
+                    const newCrates = this.crates.map((crate, i) => i == icrate ? new Crate(newCratePosition.center) : crate);
+                    const newCompleted = newCrates.every(cratePosition => this.isGoal(cratePosition.center));
                     step = step.toUpperCase();
                     newState = {
                         ...newState,
                         pushes: this.pushes + 1,
                         steps: this.steps + 1,
-                        playerRectangle: newPlayerRectangle,
-                        crateRectangles: newCratePositions,
+                        player: newState.player.withCenter(newPlayerRect.center),
+                        crates: newCrates,
                         completed: newCompleted,
                     };
                 }
@@ -325,12 +336,11 @@ export class Level {
             case Cell.Void:
                 newState = {
                     ...newState,
-                    playerRectangle: newPlayerRectangle,
+                    player: newState.player.withCenter(newPlayerRect.center),
                     steps: this.steps + 1,
                 };
                 break;
         }
-
 
         const inc = (map: ReadonlyMap<string, number>, rectangle: Rectangle): ReadonlyMap<string, number> => {
             const key = this.getKey(rectangle.center.y, rectangle.center.x);
@@ -353,42 +363,32 @@ export class Level {
             }
         };
 
-        newState = {
-            ...newState,
-            playerDirection:
-                drow == 1 && dcol == 0 ? Dir.Down :
-                drow == -1 && dcol == 0 ? Dir.Up :
-                drow == 0 && dcol == -1 ? Dir.Left :
-                drow == 0 && dcol == 1 ? Dir.Right :
-                this.playerDirection
-        };
 
         // turn in original position
-        if (newState.playerDirection !== oldState.playerDirection) {
-            if (vert(oldState.playerDirection)) {
-                if (horiz(newState.playerDirection)){
-                    newState = incHoriz(newState, oldState.playerRectangle);
+        if (newState.player.dir !== oldState.player.dir) {
+            if (vert(oldState.player.dir)) {
+                if (horiz(newState.player.dir)){
+                    newState = incHoriz(newState, oldState.player.rectangle);
                 } else {
-                    newState = incHoriz(newState, oldState.playerRectangle);
-                    newState = incVert(newState, oldState.playerRectangle);
+                    newState = incHoriz(newState, oldState.player.rectangle);
+                    newState = incVert(newState, oldState.player.rectangle);
                 }
             } else {
-                if (vert(newState.playerDirection)){
-                    newState = incVert(newState, oldState.playerRectangle);
+                if (vert(newState.player.dir)){
+                    newState = incVert(newState, oldState.player.rectangle);
                 } else {
-                    newState = incVert(newState, oldState.playerRectangle);
-                    newState = incHoriz(newState, oldState.playerRectangle);
+                    newState = incVert(newState, oldState.player.rectangle);
+                    newState = incHoriz(newState, oldState.player.rectangle);
                 }
             }
         }
 
-        if (!oldState.playerRectangle.eq(newState.playerRectangle)) {
-
+        if (!oldState.player.rectangle.eq(newState.player.rectangle)) {
             newState = {...newState, history: newState.history + step};
-            if (horiz(newState.playerDirection)) {
-                newState = incHoriz(newState, newState.playerRectangle);
+            if (horiz(newState.player.dir)) {
+                newState = incHoriz(newState, newState.player.rectangle);
             } else {
-                newState = incVert(newState, newState.playerRectangle);
+                newState = incVert(newState, newState.player.rectangle);
             }
         }
 
