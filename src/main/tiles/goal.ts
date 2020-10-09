@@ -4,7 +4,7 @@ import {tileHeight, tileWidth} from "../tiles";
 import {Screen} from "../draw";
 
 const colors = [
-    0xffffff
+    0x008800
 ]
 
 const goalTile = tile(colors)`

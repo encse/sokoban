@@ -1,7 +1,7 @@
 import {background, goHome, hideCursor} from "./util/ansi";
-import {darkenColor, hexToRgb, Rgb, rgbToHex} from "./color";
+import {hexToRgb, Rgb, rgbToHex} from "./color";
 import {Cell, Level, Tile} from "./level";
-import {baseBg, baseWallBg, baseWallFg, logo, tileHeight, tileWidth, wallTile} from "./tiles";
+import {baseWallBg, baseWallFg, logo, tileHeight, tileWidth, wallTile} from "./tiles";
 import {Random} from "./util/pick";
 import {Position} from "./position";
 
@@ -250,7 +250,6 @@ export function draw(level: Level, showLogo: boolean) {
     for(let goal of level.goals){
         goal.draw(screen);
     }
-    drawWallsBase(random, level, pss);
 
     for (let crate of level.crates) {
         crate.draw(screen, level);
@@ -320,29 +319,6 @@ export function draw(level: Level, showLogo: boolean) {
     prevTerminalHeight = terminalHeight;
 }
 
-function drawShadow(random: Random, level: Level,pss: Paxel[][], tileWidth: number,
-    tileHeight: number, irow: number, icol: number, fg: number, bg: number, drow: number=0, dcol: number=0
-) {
-    let st = '';
-    for (let tileRow = 0; tileRow < tileHeight; tileRow++) {
-        for (let tileCol = 0; tileCol < tileWidth; tileCol++) {
-            st += ' ';
-        }
-        st+=' \n';
-    }
-    drawTile(random, level, pss, irow, icol, st.split('\n'), dcol,drow, fg, bg, false);
-
-}
-
-
-function drawWallsBase(random: Random, level: Level,pss: Paxel[][]) {
-
-    for (let wall of level.wallRectangles) {
-        const {y, x} = wall;
-        drawShadow(random, level, pss, tileWidth, tileHeight, y, x, baseBg, darkenColor(baseWallFg, 0.9), 0,0);
-    }
-}
-
 function drawWalls(random: Random, level: Level,pss: Paxel[][]) {
 
     for (let wall of level.wallRectangles) {
@@ -388,26 +364,26 @@ function drawWalls(random: Random, level: Level,pss: Paxel[][]) {
                 if (tileRow == 0) {
                     if (tileCol == 0){
                         ch = tiles[0][tileHeight][tileWidth];
-                    } else if(tileCol < tileWidth - 1){
+                    } else if(tileCol < tileWidth - 2){
                         ch = tiles[1][tileHeight][tileWidth + tileCol];
                     } else {
-                        ch = tiles[2][tileHeight][tileWidth - 1];
+                        ch = tiles[2][tileHeight][tileCol];
                     }
                 } else if(tileRow < tileHeight - 1)  {
                     if (tileCol == 0){
                         ch = tiles[3][tileRow][tileWidth];
-                    } else if(tileCol < tileWidth - 1){
+                    } else if(tileCol < tileWidth - 2){
                         ch = tiles[4][tileRow][tileWidth + tileCol];
                     } else {
-                        ch = tiles[5][tileRow][tileWidth - 1];
+                        ch = tiles[5][tileRow][tileCol];
                     }
                 } else {
                     if (tileCol == 0){
                         ch = tiles[6][tileHeight-1][tileWidth];
-                    } else if(tileCol < tileWidth - 1){
+                    } else if(tileCol < tileWidth - 2){
                         ch = tiles[7][tileHeight-1][tileWidth + tileCol];
                     } else {
-                        ch = tiles[8][tileHeight-1][tileWidth - 1];
+                        ch = tiles[8][tileHeight-1][tileCol];
                     }
                 }
 
