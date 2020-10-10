@@ -1,7 +1,7 @@
 import {hexToRgb, Rgb, rgbToHex} from "../color";
 import {Cell, Level} from "../level";
-import {Tile} from "../util/stripMargin";
 import {Position} from "../position";
+import {Tile} from "../tile";
 
 type Cone = {
     readonly x: number;

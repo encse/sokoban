@@ -1,11 +1,18 @@
-import {stripMargin, Tile} from "../util/stripMargin";
+import {stripMargin} from "../util/stripMargin";
 import {Position, Rectangle} from "../position";
-import {baseWallBg, baseWallFg, tileHeight, tileWidth} from "../tiles";
 import {fuzzyColor} from "../draw";
 import {Random} from "../util/pick";
+import {darkenColor} from "../color";
+import {Tile} from "../tile";
 
 const random = new Random(0);
 
+export const baseWallFg = darkenColor(0x323232, 0.5);
+export const baseWallBg = 0x323232;
+
+
+const wallHeight = 3;
+const wallWidth = 7;
 
 const wallPattern = stripMargin`
     |    B    BA B  AB  A BA A A 
@@ -48,8 +55,8 @@ export function wallTexture(st1:string, st2:string, st3:string, st4:string): str
                 wallPattern[y + 1][x + 1] == st[3]
             ) {
                 let res = [];
-                for (let i = 0; i < tileHeight * 2; i++) {
-                    res.push(textures[(y * tileHeight) + i].substr((x * tileWidth), 2 * tileWidth));
+                for (let i = 0; i < wallHeight * 2; i++) {
+                    res.push(textures[(y * wallHeight) + i].substr((x * wallWidth), 2 * wallWidth));
                 }
                 return res;
             }
@@ -65,14 +72,14 @@ function getTile(isWall: (position: Position) => boolean, center: Position): Til
 
     let p = (y + x) % 2 == 1 ? "A" : "B";
     let np = (y + x) % 2 == 1 ? "B" : "A";
-    const wallAboveLeft = isWall(center.moveTile(-1, -1)) ? p : " ";
-    const wallAbove = isWall(center.moveTile(-1, 0)) ? np : " ";
-    const wallLeft = isWall(center.moveTile(0, -1)) ? np : " ";
-    const wallAboveRight = isWall(center.moveTile(-1, 1)) ? p : " ";
-    const wallRight = isWall(center.moveTile(0, 1)) ? np : " ";
-    const wallBelowLeft = isWall(center.moveTile(1, -1)) ? p : " ";
-    const wallBelow = isWall(center.moveTile(1, 0)) ? np : " ";
-    const wallBelowRight = isWall(center.moveTile(1, 1)) ? p : " ";
+    const wallAboveLeft = isWall(center.move(-wallHeight, -wallWidth)) ? p : " ";
+    const wallAbove = isWall(center.move(-wallHeight, 0)) ? np : " ";
+    const wallLeft = isWall(center.move(0, -wallWidth)) ? np : " ";
+    const wallAboveRight = isWall(center.move(-wallHeight, wallWidth)) ? p : " ";
+    const wallRight = isWall(center.move(0, wallWidth)) ? np : " ";
+    const wallBelowLeft = isWall(center.move(wallHeight, -wallWidth)) ? p : " ";
+    const wallBelow = isWall(center.move(wallHeight, 0)) ? np : " ";
+    const wallBelowRight = isWall(center.move(wallHeight, wallWidth)) ? p : " ";
 
     const textures = [
         wallTexture(wallAboveLeft, wallAbove, wallLeft, p),
@@ -90,8 +97,8 @@ function getTile(isWall: (position: Position) => boolean, center: Position): Til
     let fg = fuzzyColor(random, baseWallFg);
     let bg = fuzzyColor(random, baseWallBg);
 
-    for (let yT = 0; yT < tileHeight; yT++) {
-        for (let xT = 0; xT < tileWidth; xT++) {
+    for (let yT = 0; yT < wallHeight; yT++) {
+        for (let xT = 0; xT < wallWidth; xT++) {
 
             if (i % 2 == 0) {
                 fg = fuzzyColor(random, baseWallFg);
@@ -102,27 +109,27 @@ function getTile(isWall: (position: Position) => boolean, center: Position): Til
             let ch: string;
             if (yT == 0) {
                 if (xT == 0) {
-                    ch = textures[0][tileHeight][tileWidth];
-                } else if (xT < tileWidth - 2) {
-                    ch = textures[1][tileHeight][tileWidth + xT];
+                    ch = textures[0][wallHeight][wallWidth];
+                } else if (xT < wallWidth - 2) {
+                    ch = textures[1][wallHeight][wallWidth + xT];
                 } else {
-                    ch = textures[2][tileHeight][xT];
+                    ch = textures[2][wallHeight][xT];
                 }
-            } else if (yT < tileHeight - 1) {
+            } else if (yT < wallHeight - 1) {
                 if (xT == 0) {
-                    ch = textures[3][yT][tileWidth];
-                } else if (xT < tileWidth - 2) {
-                    ch = textures[4][yT][tileWidth + xT];
+                    ch = textures[3][yT][wallWidth];
+                } else if (xT < wallWidth - 2) {
+                    ch = textures[4][yT][wallWidth + xT];
                 } else {
                     ch = textures[5][yT][xT];
                 }
             } else {
                 if (xT == 0) {
-                    ch = textures[6][tileHeight - 1][tileWidth];
-                } else if (xT < tileWidth - 2) {
-                    ch = textures[7][tileHeight - 1][tileWidth + xT];
+                    ch = textures[6][wallHeight - 1][wallWidth];
+                } else if (xT < wallWidth - 2) {
+                    ch = textures[7][wallHeight - 1][wallWidth + xT];
                 } else {
-                    ch = textures[8][tileHeight - 1][xT];
+                    ch = textures[8][wallHeight - 1][xT];
                 }
             }
 

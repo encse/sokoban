@@ -1,7 +1,6 @@
-import {Tile, tile} from "../util/stripMargin";
 import {Position, Rectangle} from "../position";
-import {tileHeight, tileWidth} from "../tiles";
 import {Dir} from "../level";
+import {tile, Tile} from "../tile";
 
 const colors = [
     0x000000, // black
@@ -42,7 +41,11 @@ export class Player {
     public constructor(center: Position, dir: Dir) {
         this.center = center;
         this.dir = dir;
-        this.rectangle = new Rectangle(Math.floor(center.x - tileWidth / 2), Math.floor(center.y - tileHeight / 2), tileWidth, tileHeight)
+        this.rectangle = new Rectangle(
+            Math.floor(center.x - tiles[0].width/ 2),
+            Math.floor(center.y - tiles[0].height / 2),
+            tiles[0].width,
+            tiles[0].height)
     }
 
     public withCenter(center: Position) {

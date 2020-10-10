@@ -1,8 +1,10 @@
-import {Tile} from "../util/stripMargin";
 import {Position} from "../position";
-import {baseBg, baseFg} from "../tiles";
 import {fuzzyColor} from "../draw";
 import {Random} from "../util/pick";
+import {Tile} from "../tile";
+
+export const baseFg = 0x424242;
+export const baseBg = 0x505050;
 
 const random = new Random(0);
 

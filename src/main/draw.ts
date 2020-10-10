@@ -2,8 +2,8 @@ import {background, goHome, hideCursor} from "./util/ansi";
 import {hexToRgb, rgbToHex} from "./color";
 import {Level} from "./level";
 import {Random} from "./util/pick";
-import {Tile} from "./util/stripMargin";
 import {logo} from "./objects/logo";
+import {Tile} from "./tile";
 
 export function fuzzyColor(random: Random, color: number): number {
     let rand = random.next();

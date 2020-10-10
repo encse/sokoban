@@ -1,5 +1,3 @@
-import {tileHeight, tileWidth} from "./tiles";
-
 export class Rectangle {
     constructor(
         public readonly x: number,
@@ -16,10 +14,6 @@ export class Rectangle {
             this.x <= position.x &&
             position.x < this.x + this.width
         );
-    }
-
-    moveTile(drow: number, dcol: number) {
-        return new Rectangle(this.x + dcol * tileWidth, this.y + drow * tileHeight, this.width, this.height);
     }
 
     move(drow: number, dcol: number) {
@@ -40,28 +34,8 @@ export class Position {
     constructor(public readonly x: number, public readonly y: number) {
     }
 
-    tileLeft():Position{
-        return this.moveTile(0, -1);
-    }
-
-    tileRight():Position{
-        return this.moveTile(0, 1);
-    }
-
-    tileAbove():Position{
-        return this.moveTile(-1, 0);
-    }
-
-    tileBelow():Position{
-        return this.moveTile(1, 0);
-    }
-
     eq(pos: Position){
         return this.x === pos.x && this.y === pos.y;
-    }
-
-    moveTile(drow: number, dcol: number) {
-        return new Position(this.x + dcol * tileWidth, this.y + drow * tileHeight)
     }
 
     move(drow: number, dcol: number) {

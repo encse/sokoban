@@ -1,4 +1,4 @@
-import {solidTile} from "../util/stripMargin";
+import {solidTile} from "../tile";
 
 export const logo = solidTile(0xffffff)`
     |       ▄████████  ▄██████▄     ▄█   ▄█▄  ▄██████▄  ▀█████████▄     ▄████████ ███▄▄▄▄   

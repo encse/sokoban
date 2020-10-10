@@ -1,15 +1,17 @@
 import {Position, Rectangle} from "./position";
 import {Puzzle} from "./puzzle";
-import {tileHeight, tileWidth} from "./tiles";
 import {fail} from "./util/fail";
 import {hexToRgb} from "./color";
 import {Crate} from "./objects/crate";
 import { Player } from "./objects/player";
 import {Goal} from "./objects/goal";
-import {Tile} from "./util/stripMargin";
 import {Wall} from "./objects/wall";
 import {Floor} from "./objects/floor";
 import {addLights, Light} from "./objects/lights";
+import {Tile} from "./tile";
+
+const tileWidth = 7;
+const tileHeight = 3;
 
 export enum Cell {
     Wall,
@@ -92,10 +94,10 @@ function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
                 p.x == map[p.y].length - 1 ||
                 p.y == 0 ||
                 p.y == map.length - 1 ||
-                has(topLeft.moveTile(-1,0)) ||
-                has(topLeft.moveTile(1,0)) ||
-                has(topLeft.moveTile(0,-1)) ||
-                has(topLeft.moveTile(0,1))
+                has(topLeft.move(-tileHeight,0)) ||
+                has(topLeft.move(tileHeight,0)) ||
+                has(topLeft.move(0,-tileWidth)) ||
+                has(topLeft.move(0,tileWidth))
             )) {
                 ps.delete(p);
                 voids.push(new Rectangle(topLeft.x, topLeft.y, tileWidth, tileHeight));
@@ -115,15 +117,15 @@ function createLights(level: Level, crow: number, ccol: number): Light[] {
         for (let column = 0; column < ccol; column++) {
             const p = new Position(column * tileWidth + tileWidth / 2, row * tileHeight + tileHeight / 2);
             const n = [
-                level.getCell(p.moveTile(-1, -1)),
-                level.getCell(p.moveTile(-1,  0)),
-                level.getCell(p.moveTile(-1,  1)),
-                level.getCell(p.moveTile( 0, -1)),
+                level.getCell(p.move(-tileHeight, -tileWidth)),
+                level.getCell(p.move(-tileHeight,  0)),
+                level.getCell(p.move(-tileHeight,  tileWidth)),
+                level.getCell(p.move( 0, -tileWidth)),
                 level.getCell(p),
-                level.getCell(p.moveTile( 0,  1)),
-                level.getCell(p.moveTile( 1, -1)),
-                level.getCell(p.moveTile( 1,  0)),
-                level.getCell(p.moveTile( 1,  1)),
+                level.getCell(p.move( 0,  tileWidth)),
+                level.getCell(p.move( tileHeight, -tileWidth)),
+                level.getCell(p.move( tileHeight,  0)),
+                level.getCell(p.move( tileHeight,  tileWidth)),
             ];
 
             if (Math.random() < 0.05 && n.filter(x => x !== Cell.Wall && x !== Cell.Void).length > 5 ) {
@@ -268,7 +270,7 @@ export class Level {
     moveTile(drow: number, dcol: number) {
         let oldState = this.state;
         let newState: State = oldState;
-        const newPlayerRect = this.player.rectangle.moveTile(drow, dcol)
+        const newPlayerRect = this.player.rectangle.move(drow* tileHeight, dcol* tileWidth)
 
         newState = {
             ...newState,
@@ -293,7 +295,7 @@ export class Level {
             case Cell.Player:
                 break;
             case Cell.Crate:
-                const newCratePosition = this.player.rectangle.moveTile(2 * drow, 2 * dcol);
+                const newCratePosition = this.player.rectangle.move(2 * drow * tileHeight, 2 * dcol * tileWidth);
                 if (!this.completed && !this.isWall(newCratePosition.center) && !this.isCrate(newCratePosition.center)) {
                     const icrate = this.crates.findIndex(crate => crate.rectangle.contains(newPlayerRect.center));
                     const newCrates = this.crates.map((crate, i) => i == icrate ?
