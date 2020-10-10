@@ -31,12 +31,17 @@ export class Crate {
     readonly rectangle: Rectangle;
     readonly center: Position;
 
-    public constructor(center: Position) {
+    public constructor(center: Position, private atGoal: boolean) {
         this.center = center;
-        this.rectangle = new Rectangle(Math.floor(center.x - tileWidth / 2), Math.floor(center.y - tileHeight / 2), tileWidth, tileHeight)
+        this.rectangle = new Rectangle(
+            Math.floor(center.x - tileWidth / 2),
+            Math.floor(center.y - tileHeight / 2),
+            tileWidth,
+            tileHeight
+        )
     }
 
-    draw(tile: Tile, level: Level) {
-        tile.drawTile(tiles[level.isGoal(this.center) ? 1 : 0], this.rectangle.x, this.rectangle.y)
+    draw(surface: Tile) {
+        surface.drawTile(tiles[this.atGoal ? 1 : 0], this.rectangle.x, this.rectangle.y)
     }
 }

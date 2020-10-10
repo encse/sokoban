@@ -53,8 +53,8 @@ export class Player {
         return new Player(this.center, dir);
     }
 
-    public draw(tile: Tile) {
-        tile.drawTile(tiles[this.dir], this.rectangle.x, this.rectangle.y)
+    public draw(surface: Tile) {
+        surface.drawTile(tiles[this.dir], this.rectangle.x, this.rectangle.y)
     }
 
 }

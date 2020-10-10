@@ -1,8 +1,7 @@
 import {stripMargin, Tile} from "../util/stripMargin";
 import {Position, Rectangle} from "../position";
 import {baseWallBg, baseWallFg, tileHeight, tileWidth} from "../tiles";
-import {Level} from "../level";
-import {fuzzyColor, paxel} from "../draw";
+import {fuzzyColor} from "../draw";
 import {Random} from "../util/pick";
 
 const random = new Random(0);
@@ -17,20 +16,20 @@ const wallPattern = stripMargin`
     |                       
 `.split("\n");
 
-const wallTiles = stripMargin`
-    |                      ┌─┬─┬┐▄                            ┌─┬─┬─┬─┬─┬─┐▄       ┌─┬─┬┐▄              ┌┬─┬─┬─┬─┬─┬┐▄              ┌┬─┬─┐▄       ┌─┬─┬─┬─┬─┬─┐▄       ┌┬─┬─┐▄       ┌┬─┬─┐▄               
+const textures = stripMargin`
+    |                      ┌─┬─┬┐█                            ┌─┬─┬─┬─┬─┬─┐█       ┌─┬─┬┐█              ┌┬─┬─┬─┬─┬─┬┐█              ┌┬─┬─┐█       ┌─┬─┬─┬─┬─┬─┐█       ┌┬─┬─┐█       ┌┬─┬─┐█               
     |                      ├┬┴┬┴┤█                            ├┬┴┬┴┬┴┬┴┬┴┬┤█       ├┬┴┬┴┤█              ├┴┬┴┬┴┬┴┬┴┬┴┤█              ├┴┬┴┬┤█       ├┬┴┬┴┬┴┬┴┬┴┬┤█       ├┴┬┴┬┤█       ├┴┬┴┬┤█               
     |                      ├┴┬┴┬┤█                            ├┴┬┴┬┼─┴─┴─┴┘█       ├┴┬┴┬┤█              └─┴─┴─┴┬┴┬┴┬┤█              ├┬┴┬┴┤█       ├┴┬┴┬┴┬┴┬┴┬┴┤█       └─┴─┴┘█       └─┴─┴┘█               
-    |        ┌┬─┬─┐▄       ├┬┴┬┴┤█       ┌┬─┬─┬─┬─┬─┬┐▄       ├┬┴┬┴┤█              ├┬┴┬┴┼─┬─┬─┬┐▄              ├┬┴┬┴┤█       ┌┬─┬─┬─┼┴┬┴┬┤█       ├┬┴┬┴┬┴┬┴┬┴┬┤█              ┌┬─┬─┐▄                    
+    |        ┌┬─┬─┐█       ├┬┴┬┴┤█       ┌┬─┬─┬─┬─┬─┬┐█       ├┬┴┬┴┤█              ├┬┴┬┴┼─┬─┬─┬┐█              ├┬┴┬┴┤█       ┌┬─┬─┬─┼┴┬┴┬┤█       ├┬┴┬┴┬┴┬┴┬┴┬┤█              ┌┬─┬─┐█                    
     |        ├┴┬┴┬┤█       ├┴┬┴┬┤█       ├┴┬┴┬┴┬┴┬┴┬┴┤█       ├┴┬┴┬┤█              ├┴┬┴┬┴┬┴┬┴┬┴┤█              ├┴┬┴┬┤█       ├┴┬┴┬┴┬┴┬┴┬┴┤█       ├┴┬┴┬┴┬┴┬┴┬┴┤█              ├┴┬┴┬┤█                    
     |        └─┴─┴┘█       └─┴─┴┘█       └─┴─┴─┴─┴─┴─┘█       └─┴─┴┘█              └─┴─┴─┴─┴─┴─┘█              └─┴─┴┘█       └─┴─┴─┴─┴─┴─┘█       └─┴─┴─┴─┴─┴─┘█              └─┴─┴┘█                    
     |                                                                                                                                                                                                     
     |                                                                                                                                                                                                            
     |                                                                                                                                                                                                            
-    |                      ┌┬─┬─┐▄                            ┌┬─┬─┬─┬─┬─┬┐▄       ┌┬─┬─┐▄              ┌─┬─┬─┬─┬─┬─┐▄              ┌─┬─┬┐▄       ┌┬─┬─┬─┬─┬─┬┐▄       ┌─┬─┬┐▄       ┌─┬─┬┐▄               
+    |                      ┌┬─┬─┐█                            ┌┬─┬─┬─┬─┬─┬┐█       ┌┬─┬─┐█              ┌─┬─┬─┬─┬─┬─┐█              ┌─┬─┬┐█       ┌┬─┬─┬─┬─┬─┬┐█       ┌─┬─┬┐█       ┌─┬─┬┐█               
     |                      ├┴┬┴┬┤█                            ├┴┬┴┬┴┬┴┬┴┬┴┤█       ├┴┬┴┬┤█              ├┬┴┬┴┬┴┬┴┬┴┬┤█              ├┬┴┬┴┤█       ├┴┬┴┬┴┬┴┬┴┬┴┤█       ├┬┴┬┴┤█       ├┬┴┬┴┤█               
     |                      ├┬┴┬┴┤█                            ├┬┴┬┴┬┴─┴─┴─┘█       ├┬┴┬┴┤█              └┴─┴─┴─┼┬┴┬┴┤█              ├┴┬┴┬┤█       ├┬┴┬┴┬┴┬┴┬┴┬┤█       └┴─┴─┘█       └┴─┴─┘█               
-    |        ┌─┬─┬┐▄       ├┴┬┴┬┤█       ┌─┬─┬─┬─┬─┬─┐▄       ├┴┬┴┬┤█              ├┴┬┴┬┴┬─┬─┬─┐▄              ├┴┬┴┬┤█       ┌─┬─┬─┬┴┬┴┬┴┤█       ├┴┬┴┬┴┬┴┬┴┬┴┤█              ┌─┬─┬┐▄                    
+    |        ┌─┬─┬┐█       ├┴┬┴┬┤█       ┌─┬─┬─┬─┬─┬─┐█       ├┴┬┴┬┤█              ├┴┬┴┬┴┬─┬─┬─┐█              ├┴┬┴┬┤█       ┌─┬─┬─┬┴┬┴┬┴┤█       ├┴┬┴┬┴┬┴┬┴┬┴┤█              ┌─┬─┬┐█                    
     |        ├┬┴┬┴┤█       ├┬┴┬┴┤█       ├┬┴┬┴┬┴┬┴┬┴┬┤█       ├┬┴┬┴┤█              ├┬┴┬┴┬┴┬┴┬┴┬┤█              ├┬┴┬┴┤█       ├┬┴┬┴┬┴┬┴┬┴┬┤█       ├┬┴┬┴┬┴┬┴┬┴┬┤█              ├┬┴┬┴┤█                    
     |        └┴─┴─┘█       └┴─┴─┘█       └┴─┴─┴─┴─┴─┴┘█       └┴─┴─┘█              └┴─┴─┴─┴─┴─┴┘█              └┴─┴─┘█       └┴─┴─┴─┴─┴─┴┘█       └┴─┴─┴─┴─┴─┴┘█              └┴─┴─┘█                    
     |                                                                                                                                                                                                              
@@ -38,28 +37,28 @@ const wallTiles = stripMargin`
     |                                                                                                                                                                                                            
     `.split('\n');
 
-export function wallTile(st1:string,st2:string,st3:string,st4:string): string[] {
-    const st = st1+st2+st3+st4;
-    for (let irow = 0; irow < wallPattern.length - 1; irow++) {
-        for (let icol = 0; icol < wallTiles[0].length - 1; icol ++) {
+export function wallTexture(st1:string, st2:string, st3:string, st4:string): string[] {
+    const st = st1 + st2 + st3 + st4;
+    for (let y = 0; y < wallPattern.length - 1; y++) {
+        for (let x = 0; x < textures[0].length - 1; x++) {
             if (
-                wallPattern[irow][icol] == st[0] &&
-                wallPattern[irow][icol + 1] == st[1] &&
-                wallPattern[irow + 1][icol] == st[2] &&
-                wallPattern[irow + 1][icol + 1] == st[3]
+                wallPattern[y][x] == st[0] &&
+                wallPattern[y][x + 1] == st[1] &&
+                wallPattern[y + 1][x] == st[2] &&
+                wallPattern[y + 1][x + 1] == st[3]
             ) {
                 let res = [];
                 for (let i = 0; i < tileHeight * 2; i++) {
-                    res.push(wallTiles[(irow * tileHeight) + i].substr((icol * tileWidth), 2 * tileWidth));
+                    res.push(textures[(y * tileHeight) + i].substr((x * tileWidth), 2 * tileWidth));
                 }
                 return res;
             }
         }
     }
-    return ["xxxxxxxxxx", "xxxxxxxxxx", "xxxxxxxxxx", "xxxxxxxxxx", "xxxxxxxxxx", "xxxxxxxxxx",];
+    throw new Error();
 }
 
-function getTile(isWall: (position: Position) => boolean, center: Position) {
+function getTile(isWall: (position: Position) => boolean, center: Position): Tile {
 
     const tile = new Tile();
     const {y, x} = center;
@@ -75,16 +74,16 @@ function getTile(isWall: (position: Position) => boolean, center: Position) {
     const wallBelow = isWall(center.moveTile(1, 0)) ? np : " ";
     const wallBelowRight = isWall(center.moveTile(1, 1)) ? p : " ";
 
-    const tiles = [
-        wallTile(wallAboveLeft, wallAbove, wallLeft, p),
-        wallTile(" ", wallAbove, " ", p),
-        wallTile(wallAbove, wallAboveRight, p, wallRight),
-        wallTile(wallLeft, p, " ", " "),
-        wallTile(" ", p, " ", " "),
-        wallTile(p, wallRight, " ", " "),
-        wallTile(wallLeft, p, wallBelowLeft, wallBelow),
-        wallTile(wallLeft, p, wallBelowLeft, wallBelow),
-        wallTile(p, wallRight, wallBelow, wallBelowRight),
+    const textures = [
+        wallTexture(wallAboveLeft, wallAbove, wallLeft, p),
+        wallTexture(" ", wallAbove, " ", p),
+        wallTexture(wallAbove, wallAboveRight, p, wallRight),
+        wallTexture(wallLeft, p, " ", " "),
+        wallTexture(" ", p, " ", " "),
+        wallTexture(p, wallRight, " ", " "),
+        wallTexture(wallLeft, p, wallBelowLeft, wallBelow),
+        wallTexture(wallLeft, p, wallBelowLeft, wallBelow),
+        wallTexture(p, wallRight, wallBelow, wallBelowRight),
     ];
 
     let i = 0;
@@ -103,31 +102,31 @@ function getTile(isWall: (position: Position) => boolean, center: Position) {
             let ch: string;
             if (yT == 0) {
                 if (xT == 0) {
-                    ch = tiles[0][tileHeight][tileWidth];
+                    ch = textures[0][tileHeight][tileWidth];
                 } else if (xT < tileWidth - 2) {
-                    ch = tiles[1][tileHeight][tileWidth + xT];
+                    ch = textures[1][tileHeight][tileWidth + xT];
                 } else {
-                    ch = tiles[2][tileHeight][xT];
+                    ch = textures[2][tileHeight][xT];
                 }
             } else if (yT < tileHeight - 1) {
                 if (xT == 0) {
-                    ch = tiles[3][yT][tileWidth];
+                    ch = textures[3][yT][tileWidth];
                 } else if (xT < tileWidth - 2) {
-                    ch = tiles[4][yT][tileWidth + xT];
+                    ch = textures[4][yT][tileWidth + xT];
                 } else {
-                    ch = tiles[5][yT][xT];
+                    ch = textures[5][yT][xT];
                 }
             } else {
                 if (xT == 0) {
-                    ch = tiles[6][tileHeight - 1][tileWidth];
+                    ch = textures[6][tileHeight - 1][tileWidth];
                 } else if (xT < tileWidth - 2) {
-                    ch = tiles[7][tileHeight - 1][tileWidth + xT];
+                    ch = textures[7][tileHeight - 1][tileWidth + xT];
                 } else {
-                    ch = tiles[8][tileHeight - 1][xT];
+                    ch = textures[8][tileHeight - 1][xT];
                 }
             }
 
-            tile.set(x + xT, y + yT, paxel(ch, fg, bg));
+            tile.set(x + xT, y + yT, {ch, fg, bg});
         }
     }
     return tile;
@@ -146,8 +145,8 @@ export class Wall {
             this.tile.height)
     }
 
-    public draw(tile: Tile) {
-        tile.drawTile(this.tile, this.rectangle.x, this.rectangle.y)
+    public draw(surface: Tile) {
+        surface.drawTile(this.tile, this.rectangle.x, this.rectangle.y)
     }
 
 }

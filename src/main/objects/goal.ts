@@ -21,7 +21,7 @@ export class Goal {
         this.rectangle = new Rectangle(Math.floor(center.x - tileWidth / 2), Math.floor(center.y - tileHeight / 2), tileWidth, tileHeight)
     }
 
-    draw(tile: Tile) {
-        tile.drawTile(goalTile, this.rectangle.x, this.rectangle.y)
+    draw(surface: Tile) {
+        surface.drawTile(goalTile, this.rectangle.x, this.rectangle.y)
     }
 }

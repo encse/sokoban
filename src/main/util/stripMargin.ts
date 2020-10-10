@@ -1,13 +1,14 @@
 import {Position, Rectangle} from "../position";
 
 export class Tile {
-    private pss = new Map<string, {ch?: string, bg?: number, fg?: number}>();
+    private pss = new Map<string, { ch?: string, bg?: number, fg?: number }>();
 
     private rectangle: Rectangle | null = null;
 
     get x(): number {
         return this.rectangle == null ? 0 : this.rectangle.x;
     }
+
     get y(): number {
         return this.rectangle == null ? 0 : this.rectangle.y;
     }
@@ -15,27 +16,24 @@ export class Tile {
     get width(): number {
         return this.rectangle == null ? 0 : this.rectangle.width;
     }
+
     get height(): number {
         return this.rectangle == null ? 0 : this.rectangle.height;
     }
 
-    get(x: number, y: number): {ch?: string, bg?: number, fg?: number}{
-       return this.pss.get(this.key(x, y)) ?? {};
+    get(x: number, y: number): { ch?: string, bg?: number, fg?: number } {
+        return this.pss.get(this.key(x, y)) ?? {};
     }
 
-    getOrDefault(x: number, y: number): {ch: string, bg: number, fg: number}{
-        return {...{ch: ' ', bg: 0, fg: 0}, ...this.get(x, y)};
-    }
-
-    set(x: number, y: number, paxel: {ch?: string, bg?: number, fg?: number}) {
-        this.pss.set(this.key(x, y), {...this.get(x, y),... paxel});
+    set(x: number, y: number, p: { ch?: string, bg?: number, fg?: number }) {
+        this.pss.set(this.key(x, y), {...this.get(x, y), ...p});
         if (this.rectangle == null) {
             this.rectangle = new Rectangle(x, y, 1, 1);
         } else if (!this.rectangle.contains(new Position(x, y))) {
             const left = Math.min(x, this.rectangle.x);
             const top = Math.min(y, this.rectangle.y);
             const right = Math.max(x, this.rectangle.x + this.rectangle.width - 1);
-            const bottom = Math.max(y, this.rectangle.y+ this.rectangle.height - 1);
+            const bottom = Math.max(y, this.rectangle.y + this.rectangle.height - 1);
             this.rectangle = new Rectangle(left, top, right - left + 1, bottom - top + 1);
         }
     }
@@ -49,6 +47,12 @@ export class Tile {
             for (let xT = 0; xT < tile.width; xT++) {
                 this.set(x + xT, y + yT, tile.get(tile.x + xT, tile.y + yT));
             }
+        }
+    }
+
+    print(st: string, x: number, y: number, fg: number) {
+        for (let i = 0; i < st.length; i++) {
+            this.set(x + i, y, {ch: st[i], fg: fg});
         }
     }
 }

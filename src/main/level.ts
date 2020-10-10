@@ -1,15 +1,15 @@
 import {Position, Rectangle} from "./position";
 import {Puzzle} from "./puzzle";
-import {baseBg, baseFg, tileHeight, tileWidth} from "./tiles";
+import {tileHeight, tileWidth} from "./tiles";
 import {fail} from "./util/fail";
-import {fuzzyColor, Light, paxel, Paxel} from "./draw";
 import {hexToRgb} from "./color";
-import {Random} from "./util/pick";
-import {Crate} from "./tiles/crate";
-import { Player } from "./tiles/player";
-import {Goal} from "./tiles/goal";
+import {Crate} from "./objects/crate";
+import { Player } from "./objects/player";
+import {Goal} from "./objects/goal";
 import {Tile} from "./util/stripMargin";
-import {Wall} from "./tiles/wall";
+import {Wall} from "./objects/wall";
+import {Floor} from "./objects/floor";
+import {addLights, Light} from "./objects/lights";
 
 export enum Cell {
     Wall,
@@ -44,7 +44,7 @@ type State = {
     readonly player: Player;
     readonly lights: readonly Light[];
     readonly completed: boolean;
-    readonly ground: Tile;
+    readonly floor: Floor;
     readonly steps: number;
     readonly pushes: number;
     readonly history: string;
@@ -72,7 +72,9 @@ function  getCh(map: string[], position: Position): string {
 
 
 function find(map: string[], crow: number, ccol: number, ch: string): Rectangle[] {
-    return [...positions(crow, ccol)].filter(pos => getCh(map, pos) === ch).map(pos => new Rectangle(pos.x * tileWidth, pos.y * tileHeight, tileWidth, tileHeight));
+    return [...positions(crow, ccol)]
+        .filter(pos => getCh(map, pos) === ch)
+        .map(pos => new Rectangle(pos.x * tileWidth, pos.y * tileHeight, tileWidth, tileHeight));
 }
 
 function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
@@ -153,29 +155,6 @@ function createLights(level: Level, crow: number, ccol: number): Light[] {
     return lights;
 }
 
-function createGround(random: Random, level: Level): Tile {
-    let ch = random.pick('▓▒░ '.split(''));
-    let prevVoid = true;
-    const tile = new Tile();
-    for (let y = 0; y < level.height; y++) {
-        let fg: number = 0;
-        let bg: number = 0;
-        for (let x = 0; x < level.width; x++) {
-            let cell = level.getCell(new Position(x, y));
-            const isVoid = cell == Cell.Void;
-            if (x % 2 == 0 || prevVoid !== isVoid) {
-                fg = fuzzyColor(random, baseFg);
-                bg = isVoid ? 0 : fuzzyColor(random, baseBg);
-                ch = isVoid ? ' ' : random.pick('▓▒░ '.split(''));
-            }
-            prevVoid = isVoid;
-            tile.set(x, y, paxel(ch, fg, bg));
-        }
-    }
-
-    return tile;
-}
-
 function playerLight(level: Level): Light {
     return {
         x: level.player.rectangle.x + 4 +
@@ -209,7 +188,7 @@ export class Level {
     public get pushes() {return this.state.pushes;}
     public get time() {return this.state.time;}
     public get completed() {return this.state.completed;}
-    public get ground() { return this.state.ground; }
+    public get floor() { return this.state.floor; }
 
     get width() {
         return this.state.ccol * tileWidth;
@@ -227,7 +206,9 @@ export class Level {
         const board = puzzle.board.split('\n');
         const ccol= Math.max(...board.map(x => x.length));
         const crow = board.length;
-        const wallRects =  find(board, crow, ccol, '#');
+        const wallRects = find(board, crow, ccol, '#');
+        const voidRects = findVoids(board, crow, ccol);
+        const goalRects = find(board, crow, ccol, '.');
         const level = new Level({
             ccol : ccol,
             crow : crow,
@@ -235,12 +216,12 @@ export class Level {
             title : puzzle.title ?? "",
             author: puzzle.author ?? "",
             player: new Player(find(board, crow, ccol, '@')[0].center, Dir.Right),
-            walls: wallRects.map(rect => new Wall(rect.center, (pos => wallRects.some(wall => wall.contains(pos))))),
-            goals: find(board, crow, ccol, '.').map(rect => new Goal(rect.center)),
-            voidRectangles: findVoids(board, crow, ccol),
+            walls: wallRects.map(rect => new Wall(rect.center, pos => wallRects.some(wall => wall.contains(pos)))),
+            goals: goalRects.map(rect => new Goal(rect.center)),
+            voidRectangles: voidRects,
             completed:false,
-            crates: find(board, crow, ccol, '$').map(pos => new Crate(pos.center)),
-            ground: new Tile(),
+            crates: find(board, crow, ccol, '$').map(rect => new Crate(rect.center, goalRects.some(goal => goal.contains(rect.center)))),
+            floor: new Floor(ccol * tileWidth, crow * tileHeight, (pos) => voidRects.some(rect => rect.contains(pos))),
             lights: [],
             steps: 0,
             pushes: 0,
@@ -249,11 +230,9 @@ export class Level {
             visitedHoriz: new Map<string, number>(),
             visitedVert: new Map<string, number>()
         });
-        const random = new Random(0);
         return new Level({
             ...level.state,
             lights: createLights(level, crow, ccol),
-            ground: createGround(random, level),
         });
     }
 
@@ -317,7 +296,9 @@ export class Level {
                 const newCratePosition = this.player.rectangle.moveTile(2 * drow, 2 * dcol);
                 if (!this.completed && !this.isWall(newCratePosition.center) && !this.isCrate(newCratePosition.center)) {
                     const icrate = this.crates.findIndex(crate => crate.rectangle.contains(newPlayerRect.center));
-                    const newCrates = this.crates.map((crate, i) => i == icrate ? new Crate(newCratePosition.center) : crate);
+                    const newCrates = this.crates.map((crate, i) => i == icrate ?
+                        new Crate(newCratePosition.center, this.isGoal(newCratePosition.center)) : crate);
+
                     const newCompleted = newCrates.every(cratePosition => this.isGoal(cratePosition.center));
                     step = step.toUpperCase();
                     newState = {
@@ -501,5 +482,30 @@ export class Level {
             this.state.history,
             `\n`,
         ].join('\n');
+    }
+
+    draw(surface: Tile) {
+        this.floor.draw(surface);
+        //drawTrack(random, level, pss);
+        for (let goal of this.goals) {
+            goal.draw(surface);
+        }
+
+        for (let crate of this.crates) {
+            crate.draw(surface);
+        }
+
+        this.player.draw(surface);
+
+        for (let wall of this.walls) {
+            wall.draw(surface);
+        }
+
+        addLights(this, surface);
+
+        const fmt = (num: number) => num.toString(10).padStart(4, '0');
+        surface.print(
+            `${this.title}    Steps: ${fmt(this.steps)}    Pushes: ${fmt(this.pushes)}    Time: ${fmt(this.time)}`,
+            -2, -2, 0xffffff);
     }
 }
