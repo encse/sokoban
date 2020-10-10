@@ -1,7 +1,7 @@
 import {background, goHome, hideCursor} from "./util/ansi";
-import {hexToRgb, rgbToHex} from "./color";
+import {hexToRgb, rgbToHex} from "./util/color";
 import {Level} from "./level";
-import {Random} from "./util/pick";
+import {Random} from "./util/random";
 import {logo} from "./objects/logo";
 import {Tile} from "./tile";
 
@@ -28,43 +28,6 @@ let showLogoPrev: boolean | null = null;
 let prevTerminalHeight: number | null = null;
 let prevTerminalWidth: number | null = null;
 
-
-
-function drawTrack(_random: Random, _level: Level) {
-    //
-    // for (let row = 0; row < level.height; row++) {
-    //     for (let column = 0; column < level.width; column++) {
-    //         iflevel.visited(row, column);
-    //         if(h + v > 0){
-    //             const x = column*tileWidth;
-    //             const y = row*tileHeight;
-    //             const d = (x: number, y: number, s: number) => {
-    //                 if(pss[y][x] != null) {
-    //                     pss[y][x] = {
-    //                         ...pss[y][x],
-    //                       //  bg: darkenColor(pss[y][x].bg, Math.pow(0.98, s)),
-    //                         fg: darkenColor(pss[y][x].fg, Math.pow(0.98, s))
-    //                     }
-    //                 }
-    //             };
-    //
-    //             for(let i=0;i<tileWidth;i++){
-    //                 d(x+i, y, h);
-    //                 d(x+i, y+2, h);
-    //             }
-    //             for(let i=0;i<tileHeight;i++){
-    //                 d(x+1, y+i, v);
-    //                 d(x+2, y+i, v);
-    //                 d(x+tileWidth-1, y+i, v);
-    //                 d(x+tileWidth-2, y+i, v);
-    //             }
-    //         }
-    //     }
-    // }
-}
-
-
-
 // https://umumble.com/blogs/gdev/pixel_by_pixel-screen-fills-in-wolfenstein-3d/
 function* fizzleFade(width: number, height: number): Iterable<[number, number]> {
     let x: number;
@@ -77,7 +40,9 @@ function* fizzleFade(width: number, height: number): Iterable<[number, number]> 
         let lsb = rndval & 1; // the least significant bit is lost when shifted
         rndval >>= 1;
         if (lsb) // if the extended bit = 0, then do not xor
+        {
             rndval ^= 0x00012000;
+        }
 
         if (0 <= x && x < width && 0 <= y && y < height) {
             yield [x, y];
@@ -100,6 +65,7 @@ export function draw(level: Level, showLogo: boolean) {
     if (showLogo !== showLogoPrev) {
         prevTerminalTile = null;
     }
+
     if (levelPrev?.title != level?.title) {
         prevTerminalTile = null;
     }
@@ -118,18 +84,18 @@ export function draw(level: Level, showLogo: boolean) {
         let t = 100 / (terminalWidth * terminalHeight);
         let end = Date.now() + t;
         for (let [icol, irow] of fizzleFade(terminalWidth, terminalHeight)) {
-            const p = {ch: ' ', fg: 0, bg: 0, ... terminalTile.get(icol, irow)};
+            const p = {ch: ' ', fg: 0, bg: 0, ...terminalTile.get(icol, irow)};
             let st = `\x1b[${irow + 1};${icol + 1}H`;
             st += background(p.ch, p.fg, p.bg);
             process.stdout.write(st);
-            while(Date.now() < end){
+            while (Date.now() < end) {
                 ;
             }
             end += t;
         }
     } else {
 
-        if (terminalWidth !== prevTerminalWidth || terminalHeight !== prevTerminalHeight){
+        if (terminalWidth !== prevTerminalWidth || terminalHeight !== prevTerminalHeight) {
             prevTerminalTile = null;
         }
 
@@ -137,7 +103,7 @@ export function draw(level: Level, showLogo: boolean) {
         for (let irow = 0; irow < terminalHeight; irow++) {
             for (let icol = 0; icol < terminalWidth; icol++) {
                 const prev = prevTerminalTile?.get(icol, irow);
-                const p = {ch: ' ', fg: 0, bg: 0, ... terminalTile.get(icol, irow)};
+                const p = {ch: ' ', fg: 0, bg: 0, ...terminalTile.get(icol, irow)};
                 if (p.ch != prev?.ch || p.fg != prev?.fg || p.bg != prev?.bg) {
                     st += `\x1b[${irow + 1};${icol + 1}H`;
                     st += background(p.ch, p.fg, p.bg);
@@ -147,9 +113,9 @@ export function draw(level: Level, showLogo: boolean) {
         process.stdout.write(st);
     }
 
-    prevTerminalTile = levelTile;
     showLogoPrev = showLogo;
     levelPrev = level;
+    prevTerminalTile = terminalTile;
     prevTerminalWidth = terminalWidth;
     prevTerminalHeight = terminalHeight;
 }

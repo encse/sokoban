@@ -1,5 +1,4 @@
-
-export class Random{
+export class Random {
     constructor(private seed: number) {
     }
 

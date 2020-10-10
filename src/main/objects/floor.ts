@@ -1,6 +1,6 @@
 import {Position} from "../position";
 import {fuzzyColor} from "../draw";
-import {Random} from "../util/pick";
+import {Random} from "../util/random";
 import {Tile} from "../tile";
 
 export const baseFg = 0x424242;

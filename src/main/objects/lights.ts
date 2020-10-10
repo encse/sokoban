@@ -1,4 +1,4 @@
-import {hexToRgb, Rgb, rgbToHex} from "../color";
+import {hexToRgb, Rgb, rgbToHex} from "../util/color";
 import {Cell, Level} from "../level";
 import {Position} from "../position";
 import {Tile} from "../tile";
@@ -9,6 +9,7 @@ type Cone = {
     readonly z: number;
     readonly cosTheta: number;
 }
+
 export type Light = {
     readonly color: Rgb;
     readonly x: number;

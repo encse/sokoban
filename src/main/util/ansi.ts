@@ -33,27 +33,27 @@ export enum Color {
     Magenta,
     Cyan,
     White,
-    Gray=60,
-    BrightRed=61,
-    BrightGreen=62,
-    BrightYellow=63,
-    BrightBlue=64,
-    BrightMagenta=65,
-    BrightCyan=66,
-    BrightWhite=67,
+    Gray = 60,
+    BrightRed = 61,
+    BrightGreen = 62,
+    BrightYellow = 63,
+    BrightBlue = 64,
+    BrightMagenta = 65,
+    BrightCyan = 66,
+    BrightWhite = 67,
 };
 
 export const color = (st: string, fg: Color, bg?: Color, bold?: boolean) => {
     let res = "";
-    res += `\x1b[${30+fg}m`;
+    res += `\x1b[${30 + fg}m`;
     if (bg != null) {
         res += `\x1b[${40 + bg}m`;
     }
-    if (bold){
+    if (bold) {
         res += `\x1b[${1}m`;
     }
     res += st;
-    res +=`\x1b[0m`;
+    res += `\x1b[0m`;
     return res;
 }
 
@@ -71,7 +71,7 @@ export const background = (st: string, fg: number, bg: number) => {
     res += `\x1b[38;2;${fgR};${fgG};${fgB}m`;
     res += `\x1b[48;2;${bgR};${bgG};${bgB}m`;
     res += st;
-    res +=`\x1b[0m`;
+    res += `\x1b[0m`;
     return res;
 }
 

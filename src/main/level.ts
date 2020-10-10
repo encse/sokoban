@@ -1,14 +1,15 @@
 import {Position, Rectangle} from "./position";
 import {Puzzle} from "./puzzle";
 import {fail} from "./util/fail";
-import {hexToRgb} from "./color";
+import {hexToRgb} from "./util/color";
 import {Crate} from "./objects/crate";
-import { Player } from "./objects/player";
+import {Player} from "./objects/player";
 import {Goal} from "./objects/goal";
 import {Wall} from "./objects/wall";
 import {Floor} from "./objects/floor";
 import {addLights, Light} from "./objects/lights";
 import {Tile} from "./tile";
+import {Track} from "./objects/track";
 
 const tileWidth = 7;
 const tileHeight = 3;
@@ -23,10 +24,10 @@ export enum Cell {
 }
 
 export enum Dir {
-    Up =    0,
+    Up = 0,
     Right = 1,
-    Down =  2,
-    Left =  3,
+    Down = 2,
+    Left = 3,
 }
 
 const horiz = (dir: Dir) => dir === Dir.Left || dir === Dir.Right;
@@ -47,11 +48,10 @@ type State = {
     readonly lights: readonly Light[];
     readonly completed: boolean;
     readonly floor: Floor;
+    readonly track: Track;
     readonly steps: number;
     readonly pushes: number;
     readonly history: string;
-    readonly visitedHoriz: ReadonlyMap<string, number>;
-    readonly visitedVert: ReadonlyMap<string, number>;
 }
 
 
@@ -63,8 +63,7 @@ function* positions(crow: number, ccol: number): Iterable<Position> {
     }
 }
 
-
-function  getCh(map: string[], position: Position): string {
+function getCh(map: string[], position: Position): string {
     const {y, x} = position;
     if (y >= 0 && y < map.length && x >= 0 && x < map[y].length) {
         return map[y][x];
@@ -79,7 +78,8 @@ function find(map: string[], crow: number, ccol: number, ch: string): Rectangle[
         .map(pos => new Rectangle(pos.x * tileWidth, pos.y * tileHeight, tileWidth, tileHeight));
 }
 
-function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
+
+function findVoids(map: string[], crow: number, ccol: number,): Rectangle[] {
     const voids: Rectangle[] = [];
     let ps = new Set(positions(crow, ccol));
 
@@ -94,10 +94,10 @@ function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
                 p.x == map[p.y].length - 1 ||
                 p.y == 0 ||
                 p.y == map.length - 1 ||
-                has(topLeft.move(-tileHeight,0)) ||
-                has(topLeft.move(tileHeight,0)) ||
-                has(topLeft.move(0,-tileWidth)) ||
-                has(topLeft.move(0,tileWidth))
+                has(topLeft.move(0, -tileHeight)) ||
+                has(topLeft.move(0, tileHeight)) ||
+                has(topLeft.move(-tileWidth, 0)) ||
+                has(topLeft.move(tileWidth, 0))
             )) {
                 ps.delete(p);
                 voids.push(new Rectangle(topLeft.x, topLeft.y, tileWidth, tileHeight));
@@ -111,24 +111,24 @@ function findVoids(map: string[], crow: number, ccol: number, ): Rectangle[] {
 const visibilityCache = new Map<string, boolean>();
 
 
-function createLights(level: Level, crow: number, ccol: number): Light[] {
+function createStaticLights(level: Level, crow: number, ccol: number): Light[] {
     const lights: Light[] = [];
     for (let row = 0; row < crow; row++) {
         for (let column = 0; column < ccol; column++) {
             const p = new Position(column * tileWidth + tileWidth / 2, row * tileHeight + tileHeight / 2);
             const n = [
-                level.getCell(p.move(-tileHeight, -tileWidth)),
-                level.getCell(p.move(-tileHeight,  0)),
-                level.getCell(p.move(-tileHeight,  tileWidth)),
-                level.getCell(p.move( 0, -tileWidth)),
+                level.getCell(p.move(-tileWidth, -tileHeight)),
+                level.getCell(p.move(0, -tileHeight)),
+                level.getCell(p.move(tileWidth, -tileHeight)),
+                level.getCell(p.move(-tileWidth, 0)),
                 level.getCell(p),
-                level.getCell(p.move( 0,  tileWidth)),
-                level.getCell(p.move( tileHeight, -tileWidth)),
-                level.getCell(p.move( tileHeight,  0)),
-                level.getCell(p.move( tileHeight,  tileWidth)),
+                level.getCell(p.move(tileWidth, 0)),
+                level.getCell(p.move(-tileWidth, tileHeight)),
+                level.getCell(p.move(0, tileHeight)),
+                level.getCell(p.move(tileWidth, tileHeight)),
             ];
 
-            if (Math.random() < 0.05 && n.filter(x => x !== Cell.Wall && x !== Cell.Void).length > 5 ) {
+            if (Math.random() < 0.05 && n.filter(x => x !== Cell.Wall && x !== Cell.Void).length > 5) {
                 lights.push({
                     color: hexToRgb(0x555555),
                     x: p.x,
@@ -139,25 +139,10 @@ function createLights(level: Level, crow: number, ccol: number): Light[] {
             }
         }
     }
-
-    // lights.push({
-    //     x: level.playerRectangle.col * tileWidth + 4 +
-    //         (level.playerDirection === Dir.Right ? -3 : level.playerDirection === Dir.Left ? 3 : 0),
-    //     y: level.playerRectangle.row * tileHeight + 1.5 +
-    //         (level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0),
-    //     z: 1,
-    //     color: hexToRgb(0x440000),
-    //     direction: {
-    //         x: level.playerDirection === Dir.Right ? -1 : level.playerDirection === Dir.Left ? 1 : 0,
-    //         y: level.playerDirection === Dir.Down ? -1 : level.playerDirection === Dir.Up ? 1 : 0,
-    //         z: -0.2,
-    //         cosTheta: Math.cos(Math.PI/3)
-    //     },
-    // });
     return lights;
 }
 
-function playerLight(level: Level): Light {
+function createPlayerLight(level: Level): Light {
     return {
         x: level.player.rectangle.x + 4 +
             (level.player.dir === Dir.Right ? -3 : level.player.dir === Dir.Left ? 3 : 0),
@@ -176,21 +161,61 @@ function playerLight(level: Level): Light {
 
 export class Level {
 
-    public get author() {return this.state.author;}
-    public get title() {return this.state.title;}
-    public get goals() {return this.state.goals;}
-    public get walls() {return this.state.walls;}
-    public get crates() {return this.state.crates;}
-    public get voidRectangles() {return this.state.voidRectangles;}
-    public get player() {return this.state.player;}
+    public get author() {
+        return this.state.author;
+    }
+
+    public get title() {
+        return this.state.title;
+    }
+
+    public get goals() {
+        return this.state.goals;
+    }
+
+    public get walls() {
+        return this.state.walls;
+    }
+
+    public get crates() {
+        return this.state.crates;
+    }
+
+    public get voidRectangles() {
+        return this.state.voidRectangles;
+    }
+
+    public get player() {
+        return this.state.player;
+    }
+
     public get lights() {
-        return [...this.state.lights, playerLight(this)];
+        return [...this.state.lights, createPlayerLight(this)];
     };
-    public get steps() {return this.state.steps;}
-    public get pushes() {return this.state.pushes;}
-    public get time() {return this.state.time;}
-    public get completed() {return this.state.completed;}
-    public get floor() { return this.state.floor; }
+
+    public get steps() {
+        return this.state.steps;
+    }
+
+    public get pushes() {
+        return this.state.pushes;
+    }
+
+    public get time() {
+        return this.state.time;
+    }
+
+    public get completed() {
+        return this.state.completed;
+    }
+
+    public get floor() {
+        return this.state.floor;
+    }
+
+    public get track() {
+        return this.state.track;
+    }
 
     get width() {
         return this.state.ccol * tileWidth;
@@ -200,28 +225,28 @@ export class Level {
         return this.state.crow * tileHeight;
     };
 
-    private constructor(private readonly state: State) {
-
+    private constructor(
+        private readonly state: State) {
     }
 
-    public static fromData(puzzle: Puzzle):Level{
+    public static fromPuzzle(puzzle: Puzzle): Level {
         const board = puzzle.board.split('\n');
-        const ccol= Math.max(...board.map(x => x.length));
+        const ccol = Math.max(...board.map(x => x.length));
         const crow = board.length;
         const wallRects = find(board, crow, ccol, '#');
         const voidRects = findVoids(board, crow, ccol);
         const goalRects = find(board, crow, ccol, '.');
         const level = new Level({
-            ccol : ccol,
-            crow : crow,
-            board : puzzle.board,
-            title : puzzle.title ?? "",
+            ccol: ccol,
+            crow: crow,
+            board: puzzle.board,
+            title: puzzle.title ?? "",
             author: puzzle.author ?? "",
             player: new Player(find(board, crow, ccol, '@')[0].center, Dir.Right),
             walls: wallRects.map(rect => new Wall(rect.center, pos => wallRects.some(wall => wall.contains(pos)))),
             goals: goalRects.map(rect => new Goal(rect.center)),
             voidRectangles: voidRects,
-            completed:false,
+            completed: false,
             crates: find(board, crow, ccol, '$').map(rect => new Crate(rect.center, goalRects.some(goal => goal.contains(rect.center)))),
             floor: new Floor(ccol * tileWidth, crow * tileHeight, (pos) => voidRects.some(rect => rect.contains(pos))),
             lights: [],
@@ -229,12 +254,11 @@ export class Level {
             pushes: 0,
             history: '',
             time: 0,
-            visitedHoriz: new Map<string, number>(),
-            visitedVert: new Map<string, number>()
+            track: new Track()
         });
         return new Level({
             ...level.state,
-            lights: createLights(level, crow, ccol),
+            lights: createStaticLights(level, crow, ccol),
         });
     }
 
@@ -267,35 +291,35 @@ export class Level {
         }
     }
 
-    moveTile(drow: number, dcol: number) {
+    moveTile(dx: number, dy: number) {
         let oldState = this.state;
         let newState: State = oldState;
-        const newPlayerRect = this.player.rectangle.move(drow* tileHeight, dcol* tileWidth)
+        const newPlayerRect = this.player.rectangle.move(dx * tileWidth, dy * tileHeight)
 
         newState = {
             ...newState,
             player: newState.player.withDir(
-                drow == 1 && dcol == 0 ? Dir.Down :
-                drow == -1 && dcol == 0 ? Dir.Up :
-                drow == 0 && dcol == -1 ? Dir.Left :
-                drow == 0 && dcol == 1 ? Dir.Right :
-                this.player.dir
+                dy == 1 && dx == 0 ? Dir.Down :
+                    dy == -1 && dx == 0 ? Dir.Up :
+                        dy == 0 && dx == -1 ? Dir.Left :
+                            dy == 0 && dx == 1 ? Dir.Right :
+                                this.player.dir
             )
         }
 
         let step =
-            drow == 0 && dcol == 1 ? 'r' :
-            drow == 0 && dcol == -1 ? 'l' :
-            drow == 1 && dcol == 0 ? 'd' :
-            drow == -1 && dcol == 0 ? 'u' :
-            fail();
+            dy == 0 && dx == 1 ? 'r' :
+                dy == 0 && dx == -1 ? 'l' :
+                    dy == 1 && dx == 0 ? 'd' :
+                        dy == -1 && dx == 0 ? 'u' :
+                            fail();
 
         switch (this.getCell(newPlayerRect.center)) {
             case Cell.Wall:
             case Cell.Player:
                 break;
             case Cell.Crate:
-                const newCratePosition = this.player.rectangle.move(2 * drow * tileHeight, 2 * dcol * tileWidth);
+                const newCratePosition = this.player.rectangle.move(2 * dx * tileWidth, 2 * dy * tileHeight);
                 if (!this.completed && !this.isWall(newCratePosition.center) && !this.isCrate(newCratePosition.center)) {
                     const icrate = this.crates.findIndex(crate => crate.rectangle.contains(newPlayerRect.center));
                     const newCrates = this.crates.map((crate, i) => i == icrate ?
@@ -324,43 +348,31 @@ export class Level {
                 break;
         }
 
-        const inc = (map: ReadonlyMap<string, number>, rectangle: Rectangle): ReadonlyMap<string, number> => {
-            const key = this.getKey(rectangle.center.y, rectangle.center.x);
-            const res = new Map<string, number>(map.entries());
-            res.set(key, (map.get(key) ?? 0) + 1);
-            return res;
-        };
-
-        const incHoriz = (state: State, rectangle: Rectangle) => {
-            return  {
-                ...state,
-                visitedHoriz: inc(state.visitedHoriz, rectangle)
-            }
-        };
-
-        const incVert = (state: State, rectangle: Rectangle) => {
-            return  {
-                ...state,
-                visitedVert: inc(state.visitedVert, rectangle)
-            }
-        };
-
-
         // turn in original position
         if (newState.player.dir !== oldState.player.dir) {
             if (vert(oldState.player.dir)) {
-                if (horiz(newState.player.dir)){
-                    newState = incHoriz(newState, oldState.player.rectangle);
+                if (horiz(newState.player.dir)) {
+                    newState = {
+                        ...newState, track:
+                            newState.track.visit(oldState.player, true, false)
+                    };
                 } else {
-                    newState = incHoriz(newState, oldState.player.rectangle);
-                    newState = incVert(newState, oldState.player.rectangle);
+                    newState = {
+                        ...newState, track:
+                            newState.track.visit(oldState.player, true, true)
+                    }
                 }
             } else {
-                if (vert(newState.player.dir)){
-                    newState = incVert(newState, oldState.player.rectangle);
+                if (vert(newState.player.dir)) {
+                    newState = {
+                        ...newState, track:
+                            newState.track.visit(oldState.player, false, true)
+                    };
                 } else {
-                    newState = incVert(newState, oldState.player.rectangle);
-                    newState = incHoriz(newState, oldState.player.rectangle);
+                    newState = {
+                        ...newState, track:
+                            newState.track.visit(oldState.player, true, true)
+                    }
                 }
             }
         }
@@ -368,12 +380,17 @@ export class Level {
         if (!oldState.player.rectangle.eq(newState.player.rectangle)) {
             newState = {...newState, history: newState.history + step};
             if (horiz(newState.player.dir)) {
-                newState = incHoriz(newState, newState.player.rectangle);
+                newState = {
+                    ...newState, track:
+                        newState.track.visit(newState.player, true, false)
+                };
             } else {
-                newState = incVert(newState, newState.player.rectangle);
+                newState = {
+                    ...newState, track:
+                        newState.track.visit(newState.player, false, true)
+                };
             }
         }
-
 
         return new Level(newState);
     }
@@ -383,19 +400,19 @@ export class Level {
     }
 
     left() {
-        return this.moveTile(0, -1);
-    }
-
-    right() {
-        return this.moveTile(0, 1);
-    }
-
-    up() {
         return this.moveTile(-1, 0);
     }
 
-    down() {
+    right() {
         return this.moveTile(1, 0);
+    }
+
+    up() {
+        return this.moveTile(0, -1);
+    }
+
+    down() {
+        return this.moveTile(0, 1);
     }
 
     private validPos(pos: Position): boolean {
@@ -408,18 +425,10 @@ export class Level {
     }
 
     tick() {
-        return this.completed || this.steps == 0 ? this : new Level({...this.state, time: this.state.time+1});
+        return this.completed || this.steps == 0 ? this : new Level({...this.state, time: this.state.time + 1});
     }
 
-    visitedHoriz(row: number, column: number) {
-        return this.state.visitedHoriz.get(this.getKey(row, column)) ?? 0;
-    }
-    visitedVert(row: number, column: number) {
-        return this.state.visitedVert.get(this.getKey(row, column)) ?? 0;
-    }
-
-
-    visible(x1:number, y1:number, x2:number, y2:number): boolean {
+    visible(x1: number, y1: number, x2: number, y2: number): boolean {
 
         x1 = Math.floor(x1);
         y1 = Math.floor(y1);
@@ -427,16 +436,28 @@ export class Level {
         y2 = Math.floor(y2);
         const key = `${this.title};${x1};${y1};${x2};${y2}`;
         const cached = visibilityCache.get(key);
-        if (cached != null){
+        if (cached != null) {
             return cached;
         }
 
-        let w = x2 - x1 ;
-        let h = y2 - y1 ;
+        let w = x2 - x1;
+        let h = y2 - y1;
         let dx1 = 0, dy1 = 0, dx2 = 0, dy2 = 0;
-        if (w < 0) dx1 = -1; else if (w > 0) dx1 = 1;
-        if (h < 0) dy1 = -1; else if (h > 0) dy1 = 1;
-        if (w < 0) dx2 = -1; else if (w > 0) dx2 = 1;
+        if (w < 0) {
+            dx1 = -1;
+        } else if (w > 0) {
+            dx1 = 1;
+        }
+        if (h < 0) {
+            dy1 = -1;
+        } else if (h > 0) {
+            dy1 = 1;
+        }
+        if (w < 0) {
+            dx2 = -1;
+        } else if (w > 0) {
+            dx2 = 1;
+        }
 
         let longest = Math.abs(w);
         let shortest = Math.abs(h);
@@ -445,18 +466,21 @@ export class Level {
         if (!(longest > shortest)) {
             longest = Math.abs(h);
             shortest = Math.abs(w);
-            if (h < 0) dy2 = -1;
-            else if (h > 0) dy2 = 1;
+            if (h < 0) {
+                dy2 = -1;
+            } else if (h > 0) {
+                dy2 = 1;
+            }
             dx2 = 0;
         }
         let numerator = longest >> 1;
 
         let res = true;
-        for (let i=0;i<=longest;i++) {
+        for (let i = 0; i <= longest; i++) {
 
             numerator += shortest;
             if (!(numerator < longest)) {
-                numerator -= longest ;
+                numerator -= longest;
                 x1 += dx1;
                 y1 += dy1;
             } else {
@@ -488,7 +512,7 @@ export class Level {
 
     draw(surface: Tile) {
         this.floor.draw(surface);
-        //drawTrack(random, level, pss);
+        this.track.draw(surface);
         for (let goal of this.goals) {
             goal.draw(surface);
         }

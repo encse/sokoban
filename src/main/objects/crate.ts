@@ -1,5 +1,5 @@
 import {Position, Rectangle} from "../position";
-import {darkenColor} from "../color";
+import {darkenColor} from "../util/color";
 import {tile, Tile} from "../tile";
 
 const colors = [
@@ -12,7 +12,7 @@ const colors = [
     darkenColor(0x909021, 0.5), // edgeBgAtGoal
 ]
 
-const tiles:Tile[] = [
+const tiles: Tile[] = [
     tile(colors)`
         |┌┬┬┬┬┐▄|222222 |1111113|
         |│├ΘΘ├│█|2222223|1111113|
@@ -33,7 +33,7 @@ export class Crate {
         this.center = center;
         this.rectangle = new Rectangle(
             Math.floor(center.x - tiles[0].width / 2),
-            Math.floor(center.y - tiles[0].height/ 2),
+            Math.floor(center.y - tiles[0].height / 2),
             tiles[0].width,
             tiles[0].height
         )

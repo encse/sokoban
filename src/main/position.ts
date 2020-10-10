@@ -16,8 +16,8 @@ export class Rectangle {
         );
     }
 
-    move(drow: number, dcol: number) {
-        return new Rectangle(this.x + dcol, this.y + drow, this.width, this.height);
+    move(dx: number, dy: number) {
+        return new Rectangle(this.x + dx, this.y + dy, this.width, this.height);
     }
 
     get center(): Position {
@@ -25,20 +25,28 @@ export class Rectangle {
     }
 
     eq(playerRectangle: Rectangle) {
-        return this.y == playerRectangle.y && this.x == playerRectangle.x && this.width == playerRectangle.width && this.height == playerRectangle.height;
+        return (
+            this.y == playerRectangle.y &&
+            this.x == playerRectangle.x &&
+            this.width == playerRectangle.width &&
+            this.height == playerRectangle.height
+        );
     }
 }
 
 export class Position {
 
-    constructor(public readonly x: number, public readonly y: number) {
+    constructor(
+        public readonly x: number,
+        public readonly y: number
+    ) {
     }
 
-    eq(pos: Position){
+    eq(pos: Position) {
         return this.x === pos.x && this.y === pos.y;
     }
 
-    move(drow: number, dcol: number) {
-        return new Position(this.x + dcol, this.y + drow)
+    move(dx: number, dy: number) {
+        return new Position(this.x + dx, this.y + dy)
     }
 }

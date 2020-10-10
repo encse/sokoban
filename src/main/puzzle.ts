@@ -3,10 +3,10 @@ import {SOKReader} from "./sokparser";
 
 export class PuzzleCollection {
     title: string | null = null;
-    author: string | null= null;
-    created_at: string | null= null;
-    updated_at: string | null= null;
-    notes: string[]=[];
+    author: string | null = null;
+    created_at: string | null = null;
+    updated_at: string | null = null;
+    notes: string[] = [];
     puzzles: Puzzle[] = [];
 }
 

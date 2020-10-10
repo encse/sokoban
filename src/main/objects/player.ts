@@ -10,7 +10,7 @@ const colors = [
     0x880000, // red
 ]
 
-const tiles:Tile[] = [
+const tiles: Tile[] = [
     tile(colors)`
         | █▄▄▄▄█|       | 222222|
         | ▓▓░░▓▓|   11  | 003300|
@@ -42,7 +42,7 @@ export class Player {
         this.center = center;
         this.dir = dir;
         this.rectangle = new Rectangle(
-            Math.floor(center.x - tiles[0].width/ 2),
+            Math.floor(center.x - tiles[0].width / 2),
             Math.floor(center.y - tiles[0].height / 2),
             tiles[0].width,
             tiles[0].height)

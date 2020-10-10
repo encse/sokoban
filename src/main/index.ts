@@ -12,7 +12,7 @@ function getLevel(i: number): Level {
     i = (i + puzzleCollection.puzzles.length) % puzzleCollection.puzzles.length;
 
     if (!levels.has(i)) {
-        levels.set(i, Level.fromData(puzzleCollection.puzzles[i]))
+        levels.set(i, Level.fromPuzzle(puzzleCollection.puzzles[i]))
     }
     return levels.get(i)!;
 }
@@ -22,7 +22,7 @@ let levelIndex = 0;
 let currentLevel: Level = getLevel(levelIndex);
 let previousLevel: Level = currentLevel;
 
-function updateLevel(cb: (level: Level) => Level){
+function updateLevel(cb: (level: Level) => Level) {
     const newLevel = cb(currentLevel);
     if (newLevel.title !== previousLevel.title) {
         previousLevel = newLevel;
@@ -46,37 +46,37 @@ process.on('SIGTERM', () => {
     process.exit(0);
 });
 process.on('exit', () => {
-    process.stdout.write(clearScreen+showCursor);
+    process.stdout.write(clearScreen + showCursor);
 });
 
 process.stdin.on("data", (data) => {
-    if (data[0] == 27 && data[1] == 91 && data[2]==0x44){
+    if (data[0] == 27 && data[1] == 91 && data[2] == 0x44) {
         updateLevel(level => level.left());
-    }  else if(data[0] == 27 && data[1] == 91 && data[2]==0x43){
+    } else if (data[0] == 27 && data[1] == 91 && data[2] == 0x43) {
         updateLevel(level => level.right());
-    }  else if(data[0] == 27 && data[1] == 91 && data[2]==0x41){
+    } else if (data[0] == 27 && data[1] == 91 && data[2] == 0x41) {
         updateLevel(level => level.up());
-    }  else if(data[0] == 27 && data[1] == 91 && data[2]==0x42){
+    } else if (data[0] == 27 && data[1] == 91 && data[2] == 0x42) {
         updateLevel(level => level.down());
-    } else if(data[0] == 122){
+    } else if (data[0] == 122) {
         levelIndex--;
-        if(levelIndex < 0){
+        if (levelIndex < 0) {
             levelIndex += puzzleCollection.puzzles.length;
         }
         updateLevel(() => getLevel(levelIndex));
-    } else if(data[0] == 114){
+    } else if (data[0] == 114) {
         levels.delete(levelIndex);
         updateLevel(() => getLevel(levelIndex));
-    } else if(data[0] == 120){
+    } else if (data[0] == 120) {
         levelIndex++;
-        if(levelIndex > puzzleCollection.puzzles.length -1){
-            levelIndex-=puzzleCollection.puzzles.length;
+        if (levelIndex > puzzleCollection.puzzles.length - 1) {
+            levelIndex -= puzzleCollection.puzzles.length;
         }
         updateLevel(() => getLevel(levelIndex));
 
-    } else if(data[0] == 127){
+    } else if (data[0] == 127) {
         updateLevel(() => previousLevel);
-    }else if(data[0] == 0x1b){
+    } else if (data[0] == 0x1b) {
         process.exit(0);
     } else {
         console.log(data);
@@ -86,7 +86,7 @@ process.stdin.on("data", (data) => {
 
 draw(currentLevel, true);
 
-setTimeout(()=>{
-    setInterval(()=>updateLevel(level => level.tick()), 1000);
+setTimeout(() => {
+    setInterval(() => updateLevel(level => level.tick()), 1000);
 }, 5000);
 

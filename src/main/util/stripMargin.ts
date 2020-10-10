@@ -1,6 +1,3 @@
-import {Position, Rectangle} from "../position";
-
-
 export function stripMargin(strings: TemplateStringsArray, ...values: any[]): string {
     let s = strings[0];
     for (let i = 0; i < values.length; i++) {

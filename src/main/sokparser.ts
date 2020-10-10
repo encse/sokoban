@@ -37,7 +37,7 @@ function isSnapshotString(line: string): boolean {
     const _RE_SNAPSHOT_STRING = new RegExp("^([0-9\\s" +
         rxEscape(AtomicMoveCharacters) +
         rxEscape(NonMoveCharacters) +
-        rxEscape(RleCharacters) + "])*$" );
+        rxEscape(RleCharacters) + "])*$");
 
     return (
         !Utilities.isBlank(line) &&
@@ -45,6 +45,7 @@ function isSnapshotString(line: string): boolean {
         line.split("\n").every(line => _RE_SNAPSHOT_STRING.test(line))
     );
 }
+
 //class BoardCellCharacters(str, Enum):
 //     """Characters used in textual representation of boards."""
 //     WALL = '#'
@@ -71,13 +72,13 @@ const BoardCellCharacters = "#@+$*. -pmPMbBo_";
 //       RLE_ROW_SEPARATOR = '|'
 const RleCharacters = "()|";
 
-function rxEscape(st: string): string{
+function rxEscape(st: string): string {
     return st.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&');
 }
 
 class VariantBoard {
 
-    static _RE_BOARD_STRING = new RegExp("^([0-9\s" + rxEscape(BoardCellCharacters) + rxEscape(RleCharacters)+"])*$");
+    static _RE_BOARD_STRING = new RegExp("^([0-9\s" + rxEscape(BoardCellCharacters) + rxEscape(RleCharacters) + "])*$");
 
     static isBoardString(line: string): boolean {
         return (
@@ -292,16 +293,19 @@ export class SOKReader {
 
         let candidateIndex = notes.reverse().findIndex(x => !Utilities.isBlank(x));
 
-        if (candidateIndex < 0)
+        if (candidateIndex < 0) {
             return "";
+        }
 
         let preceedingIndex = -1;
-        if (candidateIndex > 0)
+        if (candidateIndex > 0) {
             preceedingIndex = candidateIndex - 1;
+        }
 
         let followingIndex = -1;
-        if (candidateIndex < notes.length - 1)
+        if (candidateIndex < notes.length - 1) {
             followingIndex = candidateIndex + 1;
+        }
 
         const preceedingOk = preceedingIndex >= 0 ? Utilities.isBlank(notes[preceedingIndex]) : true;
 
@@ -394,12 +398,13 @@ export class SOKReader {
 
             puzzle.notes = this.cleanupWhitespace(remainingLines);
 
-            if (tess != null)
+            if (tess != null) {
                 puzzle.tessellation = tess;
-            else if (this.collHeaderTessellationHint != null)
+            } else if (this.collHeaderTessellationHint != null) {
                 puzzle.tessellation = this.collHeaderTessellationHint;
-            else if (this.suppliedTesselationHint != null)
+            } else if (this.suppliedTesselationHint != null) {
                 puzzle.tessellation = this.suppliedTesselationHint;
+            }
 
             this.parseSnapshots(puzzle)
         }
@@ -443,13 +448,15 @@ export class SOKReader {
 
     cleanupWhitespace(lst: string[]): string[] {
         let i = lst.findIndex(x => !Utilities.isBlank(x));
-        if (i < 0)
+        if (i < 0) {
             return [];
+        }
         lst = lst.slice(i);
 
         i = lst.reverse().findIndex(x => !Utilities.isBlank(x));
-        if (i >= -1)
+        if (i >= -1) {
             lst = lst.slice(0, i + 1);
+        }
 
         return lst.map(line => line.trim())
     }

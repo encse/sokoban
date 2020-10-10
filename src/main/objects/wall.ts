@@ -1,14 +1,14 @@
 import {stripMargin} from "../util/stripMargin";
 import {Position, Rectangle} from "../position";
 import {fuzzyColor} from "../draw";
-import {Random} from "../util/pick";
-import {darkenColor} from "../color";
+import {Random} from "../util/random";
+import {darkenColor} from "../util/color";
 import {Tile} from "../tile";
 
 const random = new Random(0);
 
-export const baseWallFg = darkenColor(0x323232, 0.5);
 export const baseWallBg = 0x323232;
+export const baseWallFg = darkenColor(baseWallBg, 0.5);
 
 
 const wallHeight = 3;
@@ -44,7 +44,7 @@ const textures = stripMargin`
     |                                                                                                                                                                                                            
     `.split('\n');
 
-export function wallTexture(st1:string, st2:string, st3:string, st4:string): string[] {
+export function wallTexture(st1: string, st2: string, st3: string, st4: string): string[] {
     const st = st1 + st2 + st3 + st4;
     for (let y = 0; y < wallPattern.length - 1; y++) {
         for (let x = 0; x < textures[0].length - 1; x++) {
@@ -72,14 +72,14 @@ function getTile(isWall: (position: Position) => boolean, center: Position): Til
 
     let p = (y + x) % 2 == 1 ? "A" : "B";
     let np = (y + x) % 2 == 1 ? "B" : "A";
-    const wallAboveLeft = isWall(center.move(-wallHeight, -wallWidth)) ? p : " ";
-    const wallAbove = isWall(center.move(-wallHeight, 0)) ? np : " ";
-    const wallLeft = isWall(center.move(0, -wallWidth)) ? np : " ";
-    const wallAboveRight = isWall(center.move(-wallHeight, wallWidth)) ? p : " ";
-    const wallRight = isWall(center.move(0, wallWidth)) ? np : " ";
-    const wallBelowLeft = isWall(center.move(wallHeight, -wallWidth)) ? p : " ";
-    const wallBelow = isWall(center.move(wallHeight, 0)) ? np : " ";
-    const wallBelowRight = isWall(center.move(wallHeight, wallWidth)) ? p : " ";
+    const wallAboveLeft = isWall(center.move(-wallWidth, -wallHeight)) ? p : " ";
+    const wallAbove = isWall(center.move(0, -wallHeight)) ? np : " ";
+    const wallLeft = isWall(center.move(-wallWidth, 0)) ? np : " ";
+    const wallAboveRight = isWall(center.move(wallWidth, -wallHeight)) ? p : " ";
+    const wallRight = isWall(center.move(wallWidth, 0)) ? np : " ";
+    const wallBelowLeft = isWall(center.move(-wallWidth, wallHeight)) ? p : " ";
+    const wallBelow = isWall(center.move(0, wallHeight)) ? np : " ";
+    const wallBelowRight = isWall(center.move(wallWidth, wallHeight)) ? p : " ";
 
     const textures = [
         wallTexture(wallAboveLeft, wallAbove, wallLeft, p),

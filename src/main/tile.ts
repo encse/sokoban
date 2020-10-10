@@ -2,8 +2,14 @@ import {Position, Rectangle} from "./position";
 
 export class Tile {
     private pss = new Map<string, { ch?: string, bg?: number, fg?: number }>();
-
     private rectangle: Rectangle | null = null;
+
+    copy(): Tile {
+        const res = new Tile();
+        res.pss = new Map(this.pss.entries());
+        res.rectangle = this.rectangle;
+        return res;
+    }
 
     get x(): number {
         return this.rectangle == null ? 0 : this.rectangle.x;
@@ -71,7 +77,7 @@ function getLines(strings: TemplateStringsArray, values: any[]) {
     ).split('\n');
 
     const columns: string[][] = [];
-    for(let line of lines){
+    for (let line of lines) {
         columns.push(line.split('|'));
     }
     return columns;
