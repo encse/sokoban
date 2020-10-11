@@ -1,4 +1,4 @@
-import {Position, Rectangle} from "../position";
+import {Position, Rectangle} from "../util/position";
 import {darkenColor} from "../util/color";
 import {tile, Tile} from "../tile";
 

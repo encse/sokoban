@@ -1,8 +1,7 @@
 import {stripMargin} from "../util/stripMargin";
-import {Position, Rectangle} from "../position";
-import {fuzzyColor} from "../draw";
+import {Position, Rectangle} from "../util/position";
 import {Random} from "../util/random";
-import {darkenColor} from "../util/color";
+import {darkenColor, perturbedColor} from "../util/color";
 import {Tile} from "../tile";
 
 const random = new Random(0);
@@ -94,15 +93,15 @@ function getTile(isWall: (position: Position) => boolean, center: Position): Til
     ];
 
     let i = 0;
-    let fg = fuzzyColor(random, baseWallFg);
-    let bg = fuzzyColor(random, baseWallBg);
+    let fg = perturbedColor(random, baseWallFg);
+    let bg = perturbedColor(random, baseWallBg);
 
     for (let yT = 0; yT < wallHeight; yT++) {
         for (let xT = 0; xT < wallWidth; xT++) {
 
             if (i % 2 == 0) {
-                fg = fuzzyColor(random, baseWallFg);
-                bg = fuzzyColor(random, baseWallBg);
+                fg = perturbedColor(random, baseWallFg);
+                bg = perturbedColor(random, baseWallBg);
             }
             i++;
 

@@ -1,15 +1,10 @@
-import {Position, Rectangle} from "./position";
+import {Position, Rectangle} from "./util/position";
+
+export type Props = { ch?: string, bg?: number, fg?: number };
 
 export class Tile {
-    private pss = new Map<string, { ch?: string, bg?: number, fg?: number }>();
+    private pss = new Map<string, Props>();
     private rectangle: Rectangle | null = null;
-
-    copy(): Tile {
-        const res = new Tile();
-        res.pss = new Map(this.pss.entries());
-        res.rectangle = this.rectangle;
-        return res;
-    }
 
     get x(): number {
         return this.rectangle == null ? 0 : this.rectangle.x;
@@ -27,11 +22,15 @@ export class Tile {
         return this.rectangle == null ? 0 : this.rectangle.height;
     }
 
-    get(x: number, y: number): { ch?: string, bg?: number, fg?: number } {
+    get(x: number, y: number): Props {
+        x = Math.floor(x);
+        y = Math.floor(y);
         return this.pss.get(this.key(x, y)) ?? {};
     }
 
-    set(x: number, y: number, p: { ch?: string, bg?: number, fg?: number }) {
+    set(x: number, y: number, p: Props) {
+        x = Math.floor(x);
+        y = Math.floor(y);
         this.pss.set(this.key(x, y), {...this.get(x, y), ...p});
         if (this.rectangle == null) {
             this.rectangle = new Rectangle(x, y, 1, 1);
@@ -49,6 +48,8 @@ export class Tile {
     }
 
     drawTile(tile: Tile, x: number, y: number) {
+        x = Math.floor(x);
+        y = Math.floor(y);
         for (let yT = 0; yT < tile.height; yT++) {
             for (let xT = 0; xT < tile.width; xT++) {
                 this.set(x + xT, y + yT, tile.get(tile.x + xT, tile.y + yT));
@@ -59,6 +60,14 @@ export class Tile {
     print(st: string, x: number, y: number, fg: number) {
         for (let i = 0; i < st.length; i++) {
             this.set(x + i, y, {ch: st[i], fg: fg});
+        }
+    }
+
+    fill(rect: Rectangle, p: Props) {
+        for (let y = rect.y; y < rect.y + rect.height; y++) {
+            for (let x = rect.x; x < rect.x + rect.width; x++) {
+                this.set(x, y, p);
+            }
         }
     }
 }

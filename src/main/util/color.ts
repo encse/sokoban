@@ -1,3 +1,5 @@
+import {Random} from "./random";
+
 export type Rgb = { readonly r: number, readonly g: number, readonly b: number };
 export type Hsl = { readonly h: number, readonly s: number, readonly l: number };
 
@@ -121,3 +123,19 @@ function clamp(number: number) {
     return Math.min(Math.max(0, number), 255);
 }
 
+export function perturbedColor(random: Random, color: number): number {
+    let rand = random.next();
+
+    let d =
+        rand < 0.25 ? -1 :
+            rand < 0.5 ? 2 :
+                rand < 0.75 ? 1 :
+                    4;
+
+    const rgb = hexToRgb(color);
+    return rgbToHex({
+        r: rgb.r + d,
+        g: rgb.g + d,
+        b: rgb.b + d,
+    })
+}

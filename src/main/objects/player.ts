@@ -1,4 +1,4 @@
-import {Position, Rectangle} from "../position";
+import {Position, Rectangle} from "../util/position";
 import {Dir} from "../level";
 import {tile, Tile} from "../tile";
 

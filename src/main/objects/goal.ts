@@ -1,4 +1,4 @@
-import {Position, Rectangle} from "../position";
+import {Position, Rectangle} from "../util/position";
 import {Tile, tile} from "../tile";
 
 const colors = [

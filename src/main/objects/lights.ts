@@ -1,6 +1,6 @@
 import {hexToRgb, Rgb, rgbToHex} from "../util/color";
 import {Cell, Level} from "../level";
-import {Position} from "../position";
+import {Position} from "../util/position";
 import {Tile} from "../tile";
 
 type Cone = {

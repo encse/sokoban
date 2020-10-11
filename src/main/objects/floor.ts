@@ -1,7 +1,7 @@
-import {Position} from "../position";
-import {fuzzyColor} from "../draw";
+import {Position} from "../util/position";
 import {Random} from "../util/random";
 import {Tile} from "../tile";
+import {perturbedColor} from "../util/color";
 
 export const baseFg = 0x424242;
 export const baseBg = 0x505050;
@@ -18,8 +18,8 @@ function createFloorTile(width: number, height: number, isVoid: (pos: Position) 
         for (let x = 0; x < width; x++) {
             let cellIsVoid = isVoid(new Position(x, y));
             if (x % 2 == 0 || prevCellIsVoid !== cellIsVoid) {
-                fg = fuzzyColor(random, baseFg);
-                bg = cellIsVoid ? 0 : fuzzyColor(random, baseBg);
+                fg = perturbedColor(random, baseFg);
+                bg = cellIsVoid ? 0 : perturbedColor(random, baseBg);
                 ch = cellIsVoid ? ' ' : random.pick('▓▒░ '.split(''));
             }
             prevCellIsVoid = cellIsVoid;

@@ -1,4 +1,4 @@
-import {Position, Rectangle} from "./position";
+import {Position, Rectangle} from "./util/position";
 import {Puzzle} from "./puzzle";
 import {fail} from "./util/fail";
 import {hexToRgb} from "./util/color";
@@ -34,6 +34,7 @@ const horiz = (dir: Dir) => dir === Dir.Left || dir === Dir.Right;
 const vert = (dir: Dir) => !horiz(dir);
 
 type State = {
+    readonly index: number;
     readonly time: number;
     readonly author: string;
     readonly title: string;
@@ -201,6 +202,10 @@ export class Level {
         return this.state.pushes;
     }
 
+    public get index() {
+        return this.state.index;
+    }
+
     public get time() {
         return this.state.time;
     }
@@ -229,7 +234,7 @@ export class Level {
         private readonly state: State) {
     }
 
-    public static fromPuzzle(puzzle: Puzzle): Level {
+    public static fromPuzzle(index: number, puzzle: Puzzle): Level {
         const board = puzzle.board.split('\n');
         const ccol = Math.max(...board.map(x => x.length));
         const crow = board.length;
@@ -237,6 +242,7 @@ export class Level {
         const voidRects = findVoids(board, crow, ccol);
         const goalRects = find(board, crow, ccol, '.');
         const level = new Level({
+            index: index,
             ccol: ccol,
             crow: crow,
             board: puzzle.board,
