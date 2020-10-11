@@ -54,7 +54,7 @@ export abstract class App<State> {
     state: State;
 
     protected constructor(state: State) {
-        process.stdout.write(`${goHome}${hideCursor}`);
+        process.stdout.write(`${hideCursor}`);
 
         this.state = state;
         process.stdin.setRawMode(true);
@@ -87,9 +87,15 @@ export abstract class App<State> {
 
     }
 
+    private dirty = false;
     setState(newState: Partial<State>) {
         this.state = Object.assign(this.state, newState);
-        draw(this.render())
+        if (!this.dirty) {
+            Promise.resolve().then(() => {
+                this.dirty = false;
+                draw(this.render());
+            })
+        }
     }
 
     onKeyPress(_key: KeyCode): void {

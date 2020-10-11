@@ -3,6 +3,7 @@ import {loadPuzzleCollection, PuzzleCollection} from "./puzzle";
 import {Drawable} from "./draw";
 import {Input} from "./objects/input";
 import {App, KeyCode} from "./app";
+import {Logo} from "./objects/logo";
 
 const puzzleCollection = loadPuzzleCollection("resources/original_and_extra.sok");
 const saveFile = "resources/levels.sav";
@@ -70,6 +71,7 @@ export class SudokuApp extends App<State> {
     }
 
     onKeyPress(key: KeyCode) {
+        this.setState({logo: false});
         switch (this.state.mode) {
             case Mode.LevelSelect:
                 switch (key) {
@@ -174,6 +176,11 @@ export class SudokuApp extends App<State> {
         if (this.state.level != null) {
             drawables.push(this.state.level)
         }
+
+        if (this.state.logo) {
+            drawables.push(new Logo())
+        }
+
         if (this.state.mode === Mode.LevelSelect) {
             drawables.push(new Input({
                 question: `Jump to level: (1-${puzzleCollection.puzzles.length})`,

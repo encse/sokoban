@@ -1,4 +1,5 @@
-import {solidTile} from "../tile";
+import {solidTile, Tile} from "../tile";
+import {Drawable} from "../draw";
 
 export const logo = solidTile(0xffffff)`
     |       ▄████████  ▄██████▄     ▄█   ▄█▄  ▄██████▄  ▀█████████▄     ▄████████ ███▄▄▄▄   
@@ -19,3 +20,9 @@ export const logo = solidTile(0xffffff)`
     |                                           ·▀▀▀▀   ▀ •      ▀▀▀ ▀▀ █▪·▀▀▀  ▀▀▀▀  ▀▀▀ 
     |                                                                       csokavar.hu
 `
+
+export class Logo implements Drawable {
+    draw(surface: Tile): void {
+        surface.drawTile(logo, (surface.width - logo.width) / 2, (surface.height - logo.height) / 2);
+    }
+}
