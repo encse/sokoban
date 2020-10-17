@@ -6,9 +6,9 @@ import {perturbedColor} from "../util/color";
 export const baseFg = 0x424242;
 export const baseBg = 0x505050;
 
-const random = new Random(0);
 
 function createFloorTile(width: number, height: number, isVoid: (pos: Position) => boolean): Tile {
+    const random = new Random(0);
     let ch = random.pick('▓▒░ '.split(''));
     let prevCellIsVoid = true;
     const tile = new Tile();
@@ -33,6 +33,7 @@ export class Floor {
     readonly tile: Tile;
 
     public constructor(width: number, height: number, isVoid: (pos: Position) => boolean) {
+
         this.tile = createFloorTile(width, height, isVoid);
     }
 

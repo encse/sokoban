@@ -32,8 +32,8 @@ export class Crate {
     public constructor(center: Position, private atGoal: boolean) {
         this.center = center;
         this.rectangle = new Rectangle(
-            Math.floor(center.x - tiles[0].width / 2),
-            Math.floor(center.y - tiles[0].height / 2),
+            center.x - tiles[0].width / 2,
+            center.y - tiles[0].height / 2,
             tiles[0].width,
             tiles[0].height
         )

@@ -47,9 +47,9 @@ type State = {
     readonly crates: readonly Crate[];
     readonly player: Player;
     readonly lights: readonly Light[];
-    readonly completed: boolean;
     readonly floor: Floor;
     readonly track: Track;
+    readonly completed: boolean;
     readonly steps: number;
     readonly pushes: number;
     readonly history: string;
@@ -92,9 +92,9 @@ function findVoids(map: string[], crow: number, ccol: number,): Rectangle[] {
             const topLeft = new Position(p.x * tileWidth, p.y * tileHeight);
             if (getCh(map, p) == ' ' && (
                 p.x == 0 ||
-                p.x == map[p.y].length - 1 ||
+                p.x == ccol - 1 ||
                 p.y == 0 ||
-                p.y == map.length - 1 ||
+                p.y == crow - 1 ||
                 has(topLeft.move(0, -tileHeight)) ||
                 has(topLeft.move(0, tileHeight)) ||
                 has(topLeft.move(-tileWidth, 0)) ||
@@ -230,30 +230,33 @@ export class Level {
         return this.state.crow * tileHeight;
     };
 
-    private constructor(
-        private readonly state: State) {
+    private constructor(private readonly state: State) {
     }
 
-    public static fromPuzzle(index: number, puzzle: Puzzle): Level {
-        const board = puzzle.board.split('\n');
-        const ccol = Math.max(...board.map(x => x.length));
-        const crow = board.length;
-        const wallRects = find(board, crow, ccol, '#');
-        const voidRects = findVoids(board, crow, ccol);
-        const goalRects = find(board, crow, ccol, '.');
+    public with(state: Partial<State>){
+       return new Level({...this.state, ...state});
+    }
+
+    public static fromBoard(board: string): Level {
+        const boardRows = board.split('\n');
+        const ccol = Math.max(...boardRows.map(x => x.length));
+        const crow = boardRows.length;
+        const wallRects = find(boardRows, crow, ccol, '#');
+        const voidRects = findVoids(boardRows, crow, ccol);
+        const goalRects = find(boardRows, crow, ccol, '.');
         const level = new Level({
-            index: index,
+            index: -1,
             ccol: ccol,
             crow: crow,
-            board: puzzle.board,
-            title: puzzle.title ?? "",
-            author: puzzle.author ?? "",
-            player: new Player(find(board, crow, ccol, '@')[0].center, Dir.Right),
+            board: board,
+            title: "",
+            author: "",
+            player: new Player(find(boardRows, crow, ccol, '@')[0].center, Dir.Right),
             walls: wallRects.map(rect => new Wall(rect.center, pos => wallRects.some(wall => wall.contains(pos)))),
             goals: goalRects.map(rect => new Goal(rect.center)),
             voidRectangles: voidRects,
             completed: false,
-            crates: find(board, crow, ccol, '$').map(rect => new Crate(rect.center, goalRects.some(goal => goal.contains(rect.center)))),
+            crates: find(boardRows, crow, ccol, '$').map(rect => new Crate(rect.center, goalRects.some(goal => goal.contains(rect.center)))),
             floor: new Floor(ccol * tileWidth, crow * tileHeight, (pos) => voidRects.some(rect => rect.contains(pos))),
             lights: [],
             steps: 0,
@@ -262,9 +265,16 @@ export class Level {
             time: 0,
             track: new Track()
         });
+
+        return level.with({lights: createStaticLights(level, crow, ccol)});
+    }
+
+    public static fromPuzzle(index: number, puzzle: Puzzle): Level {
         return new Level({
-            ...level.state,
-            lights: createStaticLights(level, crow, ccol),
+            ...this.fromBoard(puzzle.board).state,
+            index: index,
+            title: puzzle.title ?? "",
+            author: puzzle.author ?? "",
         });
     }
 
@@ -306,19 +316,19 @@ export class Level {
             ...newState,
             player: newState.player.withDir(
                 dy == 1 && dx == 0 ? Dir.Down :
-                    dy == -1 && dx == 0 ? Dir.Up :
-                        dy == 0 && dx == -1 ? Dir.Left :
-                            dy == 0 && dx == 1 ? Dir.Right :
-                                this.player.dir
+                dy == -1 && dx == 0 ? Dir.Up :
+                dy == 0 && dx == -1 ? Dir.Left :
+                dy == 0 && dx == 1 ? Dir.Right :
+                this.player.dir
             )
         }
 
         let step =
             dy == 0 && dx == 1 ? 'r' :
-                dy == 0 && dx == -1 ? 'l' :
-                    dy == 1 && dx == 0 ? 'd' :
-                        dy == -1 && dx == 0 ? 'u' :
-                            fail();
+            dy == 0 && dx == -1 ? 'l' :
+            dy == 1 && dx == 0 ? 'd' :
+            dy == -1 && dx == 0 ? 'u' :
+            fail();
 
         switch (this.getCell(newPlayerRect.center)) {
             case Cell.Wall:
@@ -431,7 +441,7 @@ export class Level {
     }
 
     tick() {
-        return this.completed || this.steps == 0 ? this : new Level({...this.state, time: this.state.time + 1});
+        return this.completed || this.steps == 0 ? this : this.with({time: this.state.time + 1});
     }
 
     visible(x1: number, y1: number, x2: number, y2: number): boolean {
@@ -535,9 +545,6 @@ export class Level {
 
         addLights(this, surface);
 
-        const fmt = (num: number) => num.toString(10).padStart(4, '0');
-        surface.print(
-            `${this.title}    Steps: ${fmt(this.steps)}    Pushes: ${fmt(this.pushes)}    Time: ${fmt(this.time)}`,
-            -2, -2, 0xffffff);
+
     }
 }

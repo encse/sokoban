@@ -1,4 +1,4 @@
 import {loadPuzzleCollection} from "./puzzle";
-import {SudokuApp} from "./sudokuApp";
+import {SokobanApp} from "./sokobanApp";
 
-new SudokuApp(loadPuzzleCollection("resources/original_and_extra.sok"));
+new SokobanApp(loadPuzzleCollection("resources/original_and_extra.sok"));

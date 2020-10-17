@@ -1,4 +1,4 @@
-# Sudoku
+# Sokoban
 
 ## To run the program
 

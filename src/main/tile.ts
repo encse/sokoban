@@ -57,9 +57,13 @@ export class Tile {
         }
     }
 
-    print(st: string, x: number, y: number, fg: number) {
+    print(st: string, x: number, y: number, fg?: number) {
         for (let i = 0; i < st.length; i++) {
-            this.set(x + i, y, {ch: st[i], fg: fg});
+            let p: Props = {ch: st[i]}
+            if(fg != null){
+                p.fg = fg;
+            }
+            this.set(x + i, y, p);
         }
     }
 

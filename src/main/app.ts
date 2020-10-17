@@ -1,4 +1,4 @@
-import {clearScreen, goHome, hideCursor, showCursor} from "./util/ansi";
+import {clearScreen, hideCursor, showCursor} from "./util/ansi";
 import {draw, Drawable} from "./draw";
 
 export enum KeyCode {
@@ -50,18 +50,48 @@ export enum KeyCode {
     Z = 122,
 }
 
-export abstract class App<State> {
+export abstract class Screen<State, TApp extends App>{
     state: State;
 
-    protected constructor(state: State) {
+    protected constructor(
+        state: State,
+        protected app: TApp,
+    ) {
+        this.state = state;
+    }
+
+    private dirty = false;
+
+    setState(newState: Partial<State>) {
+        this.state = Object.assign(this.state, newState);
+        if (!this.dirty) {
+            Promise.resolve().then(() => {
+                this.dirty = false;
+                this.app.draw(this, this.render());
+            })
+        }
+    }
+
+    onKeyPress(_key: KeyCode): void {
+
+    }
+
+    abstract render(): Drawable[];
+}
+
+export abstract class App {
+
+    private screens: Screen<any, any>[] = [];
+    protected constructor() {
         process.stdout.write(`${hideCursor}`);
 
-        this.state = state;
         process.stdin.setRawMode(true);
 
         process.on('SIGWINCH', () => {
-            this.setState({});
+            this.refresh();
+
         });
+
         process.on('SIGTERM', () => {
             process.exit(0);
         });
@@ -87,22 +117,38 @@ export abstract class App<State> {
 
     }
 
-    private dirty = false;
-    setState(newState: Partial<State>) {
-        this.state = Object.assign(this.state, newState);
-        if (!this.dirty) {
-            Promise.resolve().then(() => {
-                this.dirty = false;
-                draw(this.render());
-            })
+    setScreen(screen: Screen<any, any>){
+        this.screens.push(screen);
+        this.refresh();
+    }
+
+    back(){
+        if(this.screens.length > 1){
+            this.screens.pop();
+            this.refresh();
+        }
+    }
+    get screen(): Screen<any , any> | null {
+        return this.screens[this.screens.length - 1];
+    }
+
+    draw(screen: Screen<any, any>, drawables: Drawable[]){
+        if (this.screen == screen){
+            draw(drawables);
         }
     }
 
-    onKeyPress(_key: KeyCode): void {
-
+    onKeyPress(key: KeyCode): void {
+        if (this.screen != null) {
+            this.screen.onKeyPress(key);
+        }
     }
 
-    abstract render(): Drawable[];
+    private refresh() {
+        if (this.screen != null) {
+            this.draw(this.screen, this.screen.render());
+        }
+    }
 }
 
 
