@@ -1,6 +1,6 @@
 # Sokoban
 
-Sokoban clone for the terminal featuring nice ANSI graphics with light effects.
+Sokoban clone for the terminal, featuring nice ANSI graphics with light effects.
 
 ![screenshot.png](screenshot.png)
 
