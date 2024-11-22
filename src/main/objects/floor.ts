@@ -1,7 +1,7 @@
-import {Position} from "../util/position";
-import {Random} from "../util/random";
-import {Tile} from "../tile";
-import {perturbedColor} from "../util/color";
+import {Position} from "../util/position.js";
+import {Random} from "../util/random.js";
+import {Tile} from "../tile.js";
+import {perturbedColor} from "../util/color.js";
 
 export const baseFg = 0x424242;
 export const baseBg = 0x505050;

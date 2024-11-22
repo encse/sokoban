@@ -1,9 +1,9 @@
-import {Position, Rectangle} from "../util/position";
-import {Random} from "../util/random";
-import {tile, Tile} from "../tile";
-import {darkenColor, perturbedColor} from "../util/color";
-import {Crate} from "./crate";
-import {Floor} from "./floor";
+import {Position, Rectangle} from "../util/position.js";
+import {Random} from "../util/random.js";
+import {tile, Tile} from "../tile.js";
+import {darkenColor, perturbedColor} from "../util/color.js";
+import {Crate} from "./crate.js";
+import {Floor} from "./floor.js";
 
 export type InputProps = {
     readonly question: string;

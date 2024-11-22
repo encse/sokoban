@@ -1,5 +1,5 @@
-import {Position, Rectangle} from "../util/position";
-import {Tile, tile} from "../tile";
+import {Position, Rectangle} from "../util/position.js";
+import {Tile, tile} from "../tile.js";
 
 const colors = [
     0x0000ff

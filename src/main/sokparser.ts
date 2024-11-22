@@ -1,4 +1,4 @@
-import {Puzzle, PuzzleCollection, Snapshot} from "./puzzle";
+import {Puzzle, PuzzleCollection, Snapshot} from "./puzzle.js";
 
 function isSnapshotString(line: string): boolean {
 

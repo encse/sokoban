@@ -1,8 +1,8 @@
-import {stripMargin} from "../util/stripMargin";
-import {Position, Rectangle} from "../util/position";
-import {Random} from "../util/random";
-import {darkenColor, perturbedColor} from "../util/color";
-import {Tile} from "../tile";
+import {stripMargin} from "../util/stripMargin.js";
+import {Position, Rectangle} from "../util/position.js";
+import {Random} from "../util/random.js";
+import {darkenColor, perturbedColor} from "../util/color.js";
+import {Tile} from "../tile.js";
 
 const random = new Random(0);
 

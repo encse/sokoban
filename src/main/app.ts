@@ -1,5 +1,5 @@
-import {clearScreen, hideCursor, showCursor} from "./util/ansi";
-import {draw, Drawable} from "./draw";
+import {clearScreen, hideCursor, showCursor} from "./util/ansi.js";
+import {draw, Drawable} from "./draw.js";
 
 export enum KeyCode {
     Backspace = 127,
@@ -63,7 +63,7 @@ export abstract class Screen<State, TApp extends App>{
     private dirty = false;
 
     setState(newState: Partial<State>) {
-        this.state = Object.assign(this.state, newState);
+        this.state = Object.assign(this.state as any, newState);
         if (!this.dirty) {
             Promise.resolve().then(() => {
                 this.dirty = false;
@@ -73,7 +73,6 @@ export abstract class Screen<State, TApp extends App>{
     }
 
     onKeyPress(_key: KeyCode): void {
-
     }
 
     abstract render(): Drawable[];

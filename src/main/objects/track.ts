@@ -1,6 +1,6 @@
-import {Tile} from "../tile";
-import {Player} from "./player";
-import {darkenColor} from "../util/color";
+import {Tile} from "../tile.js";
+import {Player} from "./player.js";
+import {darkenColor} from "../util/color.js";
 
 export class Track {
     private prev: Track | null = null;

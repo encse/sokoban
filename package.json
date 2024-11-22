@@ -3,17 +3,15 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "compile": "npx tsc",
-    "start": "npm run compile && node -r esm build/index.js "
+    "start": "npm run compile && node build/index.js "
   },
   "author": "encse@csokavar.hu",
   "license": "ISC",
-  "dependencies": {
-    "esm": "^3.2.25"
-  },
   "devDependencies": {
-    "typescript": "^4.0.2",
-    "@types/node": "^14.0.13"
+    "@types/node": "^22.9.1",
+    "typescript": "^5.0.0"
   }
 }

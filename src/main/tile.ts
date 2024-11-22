@@ -1,4 +1,4 @@
-import {Position, Rectangle} from "./util/position";
+import {Position, Rectangle} from "./util/position.js";
 
 export type Props = { ch?: string, bg?: number, fg?: number };
 

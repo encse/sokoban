@@ -1,9 +1,9 @@
-import {Level} from "./level";
-import {PuzzleCollection} from "./puzzle";
-import {App} from "./app";
-import {LevelScreen} from "./screens/levelScreen";
-import {LevelSelectorScreen} from "./screens/levelSelectorScreen";
-import {ConfirmExitScreen} from "./screens/confirmExitScreen";
+import {Level} from "./level.js";
+import {PuzzleCollection} from "./puzzle.js";
+import {App} from "./app.js";
+import {LevelScreen} from "./screens/levelScreen.js";
+import {LevelSelectorScreen} from "./screens/levelSelectorScreen.js";
+import {ConfirmExitScreen} from "./screens/confirmExitScreen.js";
 
 
 export class SokobanApp extends App {

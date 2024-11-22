@@ -1,7 +1,7 @@
-import {Screen, KeyCode} from "../app";
-import {Drawable} from "../draw";
-import {Input} from "../objects/input";
-import {SokobanApp} from "../sokobanApp";
+import {Screen, KeyCode} from "../app.js";
+import {Drawable} from "../draw.js";
+import {Input} from "../objects/input.js";
+import {SokobanApp} from "../sokobanApp.js";
 
 export class LevelSelectorScreen extends Screen<{inputText: string}, SokobanApp> {
 

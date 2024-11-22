@@ -1,7 +1,7 @@
-import {hexToRgb, Rgb, rgbToHex} from "../util/color";
-import {Cell, Level} from "../level";
-import {Position} from "../util/position";
-import {Tile} from "../tile";
+import {hexToRgb, Rgb, rgbToHex} from "../util/color.js";
+import {Cell, Level} from "../level.js";
+import {Position} from "../util/position.js";
+import {Tile} from "../tile.js";
 
 type Cone = {
     readonly x: number;

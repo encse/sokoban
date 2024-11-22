@@ -1,6 +1,6 @@
-import {background, clearScreen, goHome} from "./util/ansi";
-import {Tile} from "./tile";
-import {Rectangle} from "./util/position";
+import {background, clearScreen, goHome} from "./util/ansi.js";
+import {Tile} from "./tile.js";
+import {Rectangle} from "./util/position.js";
 
 let prevTerminalTile: Tile | null = null;
 let prevTerminalHeight: number | null = null;

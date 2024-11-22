@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import {SOKReader} from "./sokparser";
+import {SOKReader} from "./sokparser.js";
 
 export class PuzzleCollection {
     title: string | null = null;

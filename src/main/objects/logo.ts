@@ -1,5 +1,5 @@
-import {solidTile, Tile} from "../tile";
-import {Drawable} from "../draw";
+import {solidTile, Tile} from "../tile.js";
+import {Drawable} from "../draw.js";
 
 export const logo = solidTile(0xffffff)`
     |       ▄████████  ▄██████▄     ▄█   ▄█▄  ▄██████▄  ▀█████████▄     ▄████████ ███▄▄▄▄   

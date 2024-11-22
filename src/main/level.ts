@@ -1,15 +1,15 @@
-import {Position, Rectangle} from "./util/position";
-import {Puzzle} from "./puzzle";
-import {fail} from "./util/fail";
-import {hexToRgb} from "./util/color";
-import {Crate} from "./objects/crate";
-import {Player} from "./objects/player";
-import {Goal} from "./objects/goal";
-import {Wall} from "./objects/wall";
-import {Floor} from "./objects/floor";
-import {addLights, Light} from "./objects/lights";
-import {Tile} from "./tile";
-import {Track} from "./objects/track";
+import {Position, Rectangle} from "./util/position.js";
+import {fail} from "./util/fail.js";
+import {Puzzle} from "./puzzle.js";
+import {hexToRgb} from "./util/color.js";
+import {Crate} from "./objects/crate.js";
+import {Player} from "./objects/player.js";
+import {Goal} from "./objects/goal.js";
+import {Wall} from "./objects/wall.js";
+import {Floor} from "./objects/floor.js";
+import {addLights, Light} from "./objects/lights.js";
+import {Tile} from "./tile.js";
+import {Track} from "./objects/track.js";
 
 const tileWidth = 7;
 const tileHeight = 3;
@@ -114,8 +114,8 @@ const visibilityCache = new Map<string, boolean>();
 
 function createStaticLights(level: Level, crow: number, ccol: number): Light[] {
     const lights: Light[] = [];
-    for (let row = 0; row < crow; row++) {
-        for (let column = 0; column < ccol; column++) {
+    for (let row = 0; row < crow; row+=3) {
+        for (let column = 0; column < ccol; column+=3) {
             const p = new Position(column * tileWidth + tileWidth / 2, row * tileHeight + tileHeight / 2);
             const n = [
                 level.getCell(p.move(-tileWidth, -tileHeight)),
@@ -129,15 +129,15 @@ function createStaticLights(level: Level, crow: number, ccol: number): Light[] {
                 level.getCell(p.move(tileWidth, tileHeight)),
             ];
 
-            if (Math.random() < 0.05 && n.filter(x => x !== Cell.Wall && x !== Cell.Void).length > 5) {
+           // if (n.filter(x => x !== Cell.Wall && x !== Cell.Void).length > 5) {
                 lights.push({
-                    color: hexToRgb(0x555555),
+                    color: hexToRgb(0x222222),
                     x: p.x,
                     y: p.y,
-                    z: 3 * tileWidth,
+                    z: 4 * tileWidth,
                     direction: null,
                 });
-            }
+           // }
         }
     }
     return lights;
@@ -146,16 +146,16 @@ function createStaticLights(level: Level, crow: number, ccol: number): Light[] {
 function createPlayerLight(level: Level): Light {
     return {
         x: level.player.rectangle.x + 4 +
-            (level.player.dir === Dir.Right ? -3 : level.player.dir === Dir.Left ? 3 : 0),
+            (level.player.dir === Dir.Right ? -2 : level.player.dir === Dir.Left ? 2 : 0),
         y: level.player.rectangle.y + 1.5 +
-            (level.player.dir === Dir.Down ? -1 : level.player.dir === Dir.Up ? 1 : 0),
+            (level.player.dir === Dir.Down ? -0 : level.player.dir === Dir.Up ? 0 : 0),
         z: 1,
-        color: hexToRgb(0x440000),
+        color: hexToRgb(0x888800),
         direction: {
             x: level.player.dir === Dir.Right ? -1 : level.player.dir === Dir.Left ? 1 : 0,
             y: level.player.dir === Dir.Down ? -1 : level.player.dir === Dir.Up ? 1 : 0,
-            z: -0.2,
-            cosTheta: Math.cos(Math.PI / 3)
+            z: 1,
+            cosTheta: Math.cos(Math.PI / 3),
         },
     };
 }
@@ -311,7 +311,6 @@ export class Level {
         let oldState = this.state;
         let newState: State = oldState;
         const newPlayerRect = this.player.rectangle.move(dx * tileWidth, dy * tileHeight)
-
         newState = {
             ...newState,
             player: newState.player.withDir(
@@ -356,11 +355,13 @@ export class Level {
             case Cell.Goal:
             case Cell.Empty:
             case Cell.Void:
+
                 newState = {
                     ...newState,
                     player: newState.player.withCenter(newPlayerRect.center),
                     steps: this.steps + 1,
                 };
+
                 break;
         }
 

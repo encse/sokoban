@@ -1,6 +1,6 @@
-import {Position, Rectangle} from "../util/position";
-import {Dir} from "../level";
-import {tile, Tile} from "../tile";
+import {Position, Rectangle} from "../util/position.js";
+import {Dir} from "../level.js";
+import {tile, Tile} from "../tile.js";
 
 const colors = [
     0x000000, // black

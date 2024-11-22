@@ -1,7 +1,7 @@
-import {Screen, KeyCode} from "../app";
-import {Drawable} from "../draw";
-import {SokobanApp} from "../sokobanApp";
-import {Level} from "../level";
+import {Screen, KeyCode} from "../app.js";
+import {Drawable} from "../draw.js";
+import {SokobanApp} from "../sokobanApp.js";
+import {Level} from "../level.js";
 
 type State = {
     level: Level

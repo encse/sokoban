@@ -1,4 +1,4 @@
-import {Random} from "./random";
+import {Random} from "./random.js";
 
 export type Rgb = { readonly r: number, readonly g: number, readonly b: number };
 export type Hsl = { readonly h: number, readonly s: number, readonly l: number };
